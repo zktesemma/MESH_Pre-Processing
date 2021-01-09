@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20200722</CreaDate><CreaTime>18410400</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files (x86)\arcgis\desktop10.5\ArcToolbox\Toolboxes\Data Management Tools.tbx\JoinField" Date="20200722" Time="184104">JoinField res90_reclass_domain_landcover_30m_buffered_glaciers.tif Value reclass_domain_landcover_30m_buffered_glaciers.tif Value LC_MESH</Process></lineage></DataProperties></Esri></metadata>
