@@ -38,6 +38,7 @@ library(rgdal)
 library(numbers)
 library(shapefiles)
 library(ncdf4)
+library(geosphere)
 ######################################## User Inputs #######################################################################
 # Change the following directory path to your working directory path
 setwd("C:/PD/Automated_MESH_Setup_Sample")
@@ -58,7 +59,7 @@ IAKmax <- 5
 Min_Chanel_Slope <- 0.001
 #
 # The minimum threshold flow accumulation area to initiate stream.
-MinThresh <- 100 # based on 90 meter resolution dem (0.1km2 = 12, 0.5km2 = 61, 1km2 = 123)
+MinThresh <- 100 # any change of this default value require change at line 148 and 166 #based on 90 meter resolution dem (0.1km2 = 12, 0.5km2 = 61, 1km2 = 123) # 180 from stream drop analysis
 #
 ###### Name of the drainage basin of study ############################
 BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_") 
@@ -77,12 +78,12 @@ NumCol <- 29
 XRes <- 0.125
 YRes <- 0.125
 URXcorner <- (LLXcorner + (NumCol*XRes)) 
-URYcorner <- (LLYcorner + (NumRow*YRes)) 
+URYcorner <- (LLYcorner + (NumRow*YRes))
 #
 ### Import the Hydroshed / MERIT DEM, NWP climate forcing elevation and Land cover data for your model ####################
 domain_dem <- raster("domain_HydroShed_dem.tif")
 #
-domain_landcover <- raster("res90_reclass_domain_landcover_30m_buffered_glaciers.tif")
+domain_landcover <- raster("res90_reclass_domain_landcover_30m_buffered_glaciers.tif") 
 #
 #### Creating the basin outlet using the lat and long data ############
 streamgauge <- data.frame(lat = 51.173, long = -115.567)
@@ -102,6 +103,19 @@ domain_Sand3 <- raster("domain_Sand3.tif")
 #
 ############################## No Change after this except for GRUs Discritization Section ################################
 ###########################################################################################################################
+### Produce the lat long of the center of the forcing grid
+#
+YLat <- matrix(0, NumRow, NumCol, byrow = T)
+XLon <- matrix(0, NumRow, NumCol, byrow = T)
+#
+for (i in 1:NumRow) {
+  for (j in 1:NumCol) {
+    XLon[i,j] <- LLXcorner + (XRes/2) + (j-1)*XRes
+    YLat[i,j] <- LLYcorner + (YRes/2) + (i-1)*XRes
+  }
+}
+#
+#### Produce zonal raster for the NWP grid
 NumGrids <- matrix(seq(1,(NumRow*NumCol),1), NumRow, NumCol, byrow = T) 
 nwp_grid <- raster(NumGrids)
 extent(nwp_grid) <- extent(LLXcorner,(LLXcorner+(NumCol*XRes)),LLYcorner,(LLYcorner+(NumRow*YRes)))
@@ -541,9 +555,9 @@ for (i in 1:nrow(grid_drain_area)) {
 grid_cell_size <- area(NWPGridFullArea, na.rm=TRUE, weights=FALSE)
 grid_cell_size <- grid_cell_size[!is.na(grid_cell_size)]
 # compute area [km2]
-NominalGrid_Size <- median(grid_cell_size)
+NominalGrid_Area <- mean(grid_cell_size)
 #
-GridArea <- 1000000 * grid_drain_area * (NominalGrid_Size/as.matrix(NWPGridFullArea))
+GridArea <- 1000000 * grid_drain_area * (NominalGrid_Area/as.matrix(NWPGridFullArea))
 GridArea1 <- raster(GridArea/1000000)
 extent(GridArea1) <- extent(nwp_grid)
 dim(GridArea1) <- dim(nwp_grid)
@@ -558,7 +572,7 @@ DA <- as.matrix(raster("grid_da_ad8.tif"))
 DA[is.na(DA)] <- 0
 #
 ## Bankfull cross-section area of river channel in m2
-Bankfull  <- 0.1667 * DA + 0.1     # BA <- (11.0 + 0.43*(DA))
+Bankfull  <- 0.1667 * DA + 0.1     # best fit regression equation from Green Kenue #BA <- (11.0 + 0.43*(DA))
 #
 ## define river classes (IAK) using drainage area (DA)
 IAK <- matrix(0, NumRow, NumCol)
@@ -595,84 +609,84 @@ Chnl <- as.matrix(reclassify(stord, channelclass2))
 # # Other option may be to use IAK for channel density as well.
 # Chnl <- IAK
 #
-## Longest flow path for channel length / slope calculation
-flow_path_mask0 <- matrix(NA,nrow(fdir2),ncol(fdir2))
-for (i in 1:8) {
-  xy <- which(fdir2 == i, arr.ind=TRUE)
-  xz <- xy
-  xz[,1] <- (xy[,1] + as.integer(FdirNumber[i,1]))
-  xz[,2] <- (xy[,2] + as.integer(FdirNumber[i,2]))
-  flow_path_mask0[xz] <- 1
-}
-#
-flow_path_mask <- raster(flow_path_mask0)
-extent(flow_path_mask) <- extent(nwp_zone)
-dim(flow_path_mask) <- dim(nwp_zone)
-res(flow_path_mask) <- res(nwp_zone)
-crs(flow_path_mask) <- crs(nwp_zone)
-#
-flow_path2 <- mask(flow_path1,filldem4_facc4)
-flow_path3 <- mask(flow_path1,flow_path_mask)
-ChnlLength1 <- as.matrix(aggregate(flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
-ChnlLength1[ChnlLength1 == 0] <- 100 # 100 assumed to be the minimum length required to initiate overland flow
-ChnlLength2 <- as.matrix(aggregate(flow_path3, fact = ResFactor, fun = mean, na.rm=TRUE))
-ChnlLength1[is.na(ChnlLength1)] <- 0
-ChnlLength2[is.na(ChnlLength2)] <- 0
-ChnlLength <- (ChnlLength1 - ChnlLength2) 
-#
-# ## Similar to Green Kenue methods but not tested yet ####
-# total_length <- 1000 * as.matrix(NWPGridFullArea) * sqrt(NominalGrid_Size) / NominalGrid_Size
-# channel_length <- matrix(0, nrow = NumRow, ncol = NumCol, byrow = T)
-# channel_elevation = as.matrix(aggregate(filldem1, fact = ResFactor, fun = mean, na.rm=TRUE))
-# channel_slope <- matrix(0, nrow = NumRow, ncol = NumCol, byrow = T)
+# ## A Similar way to calculate channel length as Green Kenue methods ####
+channel_length <- matrix(0, nrow = NumRow, ncol = NumCol, byrow = T)
+channel_slope <- matrix(0, nrow = NumRow, ncol = NumCol, byrow = T)
 # #
-# for (i in 1:nrow(channel_length)) {
-#   for (j in 1:ncol(channel_length)) {
-#     
-#     if ((i-1 >= 1) & (j-1 >= 1) & (i+1 <= NumRow) & (j+1 <= NumCol)) {
-#       if (is.na(grid_fdir[i,j])) {
-#         channel_length[i,j] <- 0 }
-#       else if (grid_fdir[i,j] == 1) {
-#         channel_length[i,j] <- (total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i+1,j])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 2) {
-#         channel_length[i,j] <- (sqrt(2)*total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i+1,j+1])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 3) {
-#         channel_length[i,j] <- (total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i,j+1])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 4) {
-#         channel_length[i,j] <- (sqrt(2)*total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i+1,j-1])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 5) {
-#         channel_length[i,j] <- (total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i-1,j])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 6) {
-#         channel_length[i,j] <- (sqrt(2)*total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i-1,j-1])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 7) {
-#         channel_length[i,j] <- (total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i,j-1])/channel_length[i,j])}
-#       else if (grid_fdir[i,j] == 8) {
-#         channel_length[i,j] <- (sqrt(2)*total_length[i,j])
-#         channel_slope[i,j] <- ((channel_elevation[i,j] - channel_elevation[i+1,j-1])/channel_length[i,j])}
-#     }
-#   }
-# }
-## River slope in m/m
-filldem5 <- mask(filldem1, facc_at_outlet1)
-Elevn_flow_path0 <- as.matrix(aggregate(filldem5, fact = ResFactor, fun = max, na.rm=TRUE))
-Elevn_flow_path1 <- mask(filldem5,filldem4_facc4)
-Elevn_flow_path2 <- mask(filldem5,flow_path_mask)
-Elevn_flow_path3 <- as.matrix(aggregate(Elevn_flow_path1, fact = ResFactor, fun = mean, na.rm=TRUE))
-Elevn_flow_path4 <- as.matrix(aggregate(Elevn_flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
-xz <- which(is.na(Elevn_flow_path4), arr.ind=TRUE)
-Elevn_flow_path4[xz] <- Elevn_flow_path0[xz]
-ChnlSlope <- (Elevn_flow_path4 - Elevn_flow_path3)/ChnlLength
-ChnlSlope[is.na(ChnlSlope)] <- 0.001  # Some grid has zero flow length as the grid area is so small and need to be corrected by setting the minimum slope or remove the small basin area in grid area
-ChnlSlope[is.infinite(ChnlSlope)] <- 0.001
-ChnlSlope[ChnlSlope < Min_Chanel_Slope] <- Min_Chanel_Slope
+for (i in 1:nrow(channel_length)) {
+  for (j in 1:ncol(channel_length)) {
+
+    if ((i-1 >= 1) & (j-1 >= 1) & (i+1 <= NumRow) & (j+1 <= NumCol)) {
+      if (is.na(grid_fdir[i,j])) {
+        channel_length[i,j] <- 0 }
+      else if (grid_fdir[i,j] == 1) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i,j+1], YLat[i,j+1]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i,j+1])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 2) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i-1,j+1], YLat[i-1,j+1]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i-1,j+1])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 3) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i-1,j], YLat[i-1,j]), fun = distHaversine)
+       channel_slope[i,j] <- ((Elev[i,j] - Elev[i-1,j])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 4) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i-1,j-1], YLat[i-1,j-1]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i-1,j-1])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 5) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i,j-1], YLat[i,j-1]), fun = distHaversine)
+       channel_slope[i,j] <- ((Elev[i,j] - Elev[i,j-1])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 6) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i+1,j-1], YLat[i+1,j-1]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i+1,j-1])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 7) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i+1,j], YLat[i+1,j]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i+1,j])/channel_length[i,j])}
+      else if (grid_fdir[i,j] == 8) {
+        channel_length[i,j] <- distm (c(XLon[i,j], YLat[i,j]), c(XLon[i+1,j+1], YLat[i+1,j+1]), fun = distHaversine)
+        channel_slope[i,j] <- ((Elev[i,j] - Elev[i+1,j+1])/channel_length[i,j])}
+    }
+  }
+}
+channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
 #
+# ## Longest flow path for channel length / slope calculation this may violate some of the assumption of the WATFLOOD routing as it has different length  
+# flow_path_mask0 <- matrix(NA,nrow(fdir2),ncol(fdir2))
+# for (i in 1:8) {
+#   xy <- which(fdir2 == i, arr.ind=TRUE)
+#   xz <- xy
+#   xz[,1] <- (xy[,1] + as.integer(FdirNumber[i,1]))
+#   xz[,2] <- (xy[,2] + as.integer(FdirNumber[i,2]))
+#   flow_path_mask0[xz] <- 1
+# }
+# #
+# flow_path_mask <- raster(flow_path_mask0)
+# extent(flow_path_mask) <- extent(nwp_zone)
+# dim(flow_path_mask) <- dim(nwp_zone)
+# res(flow_path_mask) <- res(nwp_zone)
+# crs(flow_path_mask) <- crs(nwp_zone)
+# #
+# flow_path2 <- mask(flow_path1,filldem4_facc4)
+# flow_path3 <- mask(flow_path1,flow_path_mask)
+# ChnlLength1 <- as.matrix(aggregate(flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
+# ChnlLength1[ChnlLength1 == 0] <- 100 # 100 assumed to be the minimum length required to initiate overland flow
+# ChnlLength2 <- as.matrix(aggregate(flow_path3, fact = ResFactor, fun = mean, na.rm=TRUE))
+# ChnlLength1[is.na(ChnlLength1)] <- 0
+# ChnlLength2[is.na(ChnlLength2)] <- 0
+# channel_length <- (ChnlLength1 - ChnlLength2) 
+# 
+# ## River slope in m/m
+# filldem5 <- mask(filldem1, facc_at_outlet1)
+# Elevn_flow_path0 <- as.matrix(aggregate(filldem5, fact = ResFactor, fun = max, na.rm=TRUE))
+# Elevn_flow_path1 <- mask(filldem5,filldem4_facc4)
+# Elevn_flow_path2 <- mask(filldem5,flow_path_mask)
+# Elevn_flow_path3 <- as.matrix(aggregate(Elevn_flow_path1, fact = ResFactor, fun = mean, na.rm=TRUE))
+# Elevn_flow_path4 <- as.matrix(aggregate(Elevn_flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
+# xz <- which(is.na(Elevn_flow_path4), arr.ind=TRUE)
+# Elevn_flow_path4[xz] <- Elevn_flow_path0[xz]
+# channel_slope <- (Elevn_flow_path4 - Elevn_flow_path3)/ChnlLength
+# channel_slope[is.na(channel_slope)] <- 0.001  # Some grid has zero flow length as the grid area is so small and need to be corrected by setting the minimum slope or remove the small basin area in grid area
+# channel_slope[is.infinite(channel_slope)] <- 0.001
+# channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
+# #
 ## Reach number for lake, reservoir and/or external routing: user can assign number from 1,2,3...with respect to the number of reservoir / lakes 
 Reach  <- matrix(0, nrow = NumRow, ncol = NumCol)
 # ###########################################################################
@@ -683,11 +697,11 @@ grid_next[is.na(grid_next)] <- 0
 #
 DA[is.na(DA)] <- 0
 #
-ChnlLength[is.na(ChnlLength)]  <- 0
+channel_length[is.na(channel_length)]  <- 0
 #
 Bankfull[is.na(Bankfull)] <- 0
 #
-ChnlSlope[is.na(ChnlSlope)] <- 0
+channel_slope[is.na(channel_slope)] <- 0
 #
 Elev[is.na(Elev)] <- 0
 #
@@ -702,7 +716,7 @@ Reach[is.na(Reach)] <- 0
 GridArea[is.na(GridArea)] <- 0
 ##
 drainagedata <- rbind((apply(grid_rank, 2, rev)), (apply(grid_next, 2, rev)), (apply(DA, 2, rev)), (apply(Bankfull, 2, rev)), 
-                      (apply(ChnlSlope, 2, rev)), (apply(Elev, 2, rev)), (apply(ChnlLength, 2, rev)), (apply(IAK, 2, rev)),
+                      (apply(channel_slope, 2, rev)), (apply(Elev, 2, rev)), (apply(channel_length, 2, rev)), (apply(IAK, 2, rev)),
                       (apply(IntSlope, 2, rev)), (apply(Chnl, 2, rev)), (apply(Reach, 2, rev)), (apply(GridArea, 2, rev)))
 ####################################################################################################################################
 ### Model discretization and GRUs creation: Combine the land cover, slope and aspect for mountain MESH version and land cover only
@@ -833,8 +847,8 @@ dranage_database <- rbind(drainagedata,grus_frac_r2c)
 ########################################################################################################
 ## Add source file name to header and required information for the drainage database file header
 ##
-NominalGrid_Size <- sqrt(NominalGrid_Size)*1000
-NominalGrid_Size_Value <- paste(":NominalGridSize_AL   ",NominalGrid_Size, sep = "")
+NominalGrid_Length <- sqrt(NominalGrid_Area)*1000
+NominalGrid_Area_Value <- paste(":NominalGridSize_AL   ",NominalGrid_Length, sep = "")
 contour_interval <- 1
 contour_interval_value <- paste(":ContourInterval   ",contour_interval, sep = "")
 Impervious_Area <- 0
@@ -874,7 +888,7 @@ header1 <- c(header1, creation_date, "#", "#------------------------------------
 # add source file name to header
 sourcefile <- ":SourceFile              DEM from Hydroshed and Land Cover from COE"
 header1 <- c(header1, sourcefile)
-header1 <- c(header1, NominalGrid_Size_Value)
+header1 <- c(header1, NominalGrid_Area_Value)
 header1 <- c(header1, contour_interval_value)
 header1 <- c(header1, Impervious_Area_value)
 header1 <- c(header1, class_count_value)
@@ -1140,12 +1154,17 @@ for (i in 1:Number_Soil_Layers) {
   j <- i 
   attributename <- paste(":AttributeName ", j, " Clay	", i, "")
   header1 <- c(header1, attributename)
+  attributeunits <- paste(":AttributeUnits ", j, " % ")
+  header1 <- c(header1, attributeunits)
+  
 }
 #
 for (i in 1:Number_Soil_Layers) {
   j <- j + 1
   attributename <- paste(":AttributeName ", j, " Sand	", i, "")
   header1 <- c(header1, attributename)
+  attributeunits <- paste(":AttributeUnits ", j, " % ")
+  header1 <- c(header1, attributeunits)
 }
 #
 for (i in 1:maxValue(grus1)) {
