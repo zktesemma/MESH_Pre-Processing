@@ -646,6 +646,8 @@ for (i in 1:nrow(channel_length)) {
     }
   }
 }
+#
+channel_slope[is.na(channel_slope)] <- 0
 channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
 #
 # ## Longest flow path for channel length / slope calculation this may violate some of the assumption of the WATFLOOD routing as it has different length  
