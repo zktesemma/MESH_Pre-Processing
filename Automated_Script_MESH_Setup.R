@@ -48,11 +48,11 @@ ncpath <- "C:/PD/Automated_MESH_Setup_Sample"
 MESHVersion <- "Mountain"
 #MESHVersion <- "Original"
 #
-########### Comment either Reservoir or NOReservoir insertion #########################################################
+########### Comment either Reservoir or NOReservoir insertion ############################################################
 InsertedReservoir <- "NoReservoir"
 # InsertedReservoir <- "Reservoir"
 if (InsertedReservoir == "Reservoir") {
-#### Reading Reservoir location shapefile or csv file (reservoirs.shp / reservoirs.csv ) lat and long data #######################################
+#### Reading Reservoir location shapefile or csv file (reservoirs.shp / reservoirs.csv ) of lat-long of resevoir outlet ##
   reservoirlocation <- read.csv("reservoirs.csv")
   coordinates(reservoirlocation) = ~ LONGITUDE+LATITUDE
   # reservoirlocation <- readOGR(dsn = ".", layer = "approxoutlets")
@@ -83,8 +83,10 @@ BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_")
 FdirNumber <- matrix((as.integer(c(0,-1,-1,-1,0,1,1,1,1,1,0,-1,-1,-1,0,1))),8,2)
 ################### Slope and Aspect Classification for GRUs Creations ################################################################################################################
 ##### Land cover and two slope Classes: (0 - 10) and (> 10) and two aspects: North and South Facing can be modified to include other orientations ##############
-landcoverclass <- matrix(c(1,2,3,4,5,6,7,1,2,3,4,5,6,7), nr = 7, nc = 2)
 # landcoverclass <- matrix(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,10), nr = 20, nc = 2)
+landcoverclass <- matrix(c(0,1,2,3,4,5,6,1,2,3,4,5,6,7,1,2,3,4,5,6,7), nr = 7, nc = 3)
+GRUsReclass <- matrix(c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,1,1,1,2,2,2,3,4,5,6,6,6,7,7,7,8,9,10,11,11,11), nr = 21, nc = 3)
+#
 slopeclass <- matrix(c(0, 10, 10, 90, 1, 2), nr = 2, nc = 3)
 aspectclass <- matrix(c(0, 90, 270, 90, 270, 360, 1, 2, 1), nr = 3, nc = 3)
 # For 4 quadrants (North, East, South and West) (315 < N <= 45), (45 < E <= 135), (135 < S <= 225), (225 < W <= 315) # From GEM
@@ -763,7 +765,17 @@ if (MESHVersion == "Mountain") {
   #
   ### Model discretization and GRUs creation: Combine the land cover, slope and aspect #############################################
   grus1 <- basin_landcover
+  for (i in 1 : maxValue(basin_landcover)) {
+    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3*i-2
+    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 3*i-1
+    grus1[basin_landcover == i & basin_slopeclass == 1 & basin_aspectclass <= 2] <- 3*i
+    grus1[basin_landcover == i & basin_slopeclass == 1 & basin_aspectclass <= 1] <- 3*i
+  }
+  grus <- reclassify(grus1, GRUsReclass)
+  grus1 <- grus
+
   #
+  grus1 <- basin_landcover
   grus1[basin_landcover == 1] <- 1
   grus1[basin_landcover == 2] <- 2
   #
@@ -781,7 +793,6 @@ if (MESHVersion == "Mountain") {
   grus1[basin_landcover == 6 & basin_slopeclass == 1 & basin_aspectclass <= 1] <- 10
   #
   grus1[basin_landcover == 7] <- 11
-  #
 }
 #
 # writeRaster(grus1, "GRUs_Produced.tif", datatype="INT2S", overwrite=TRUE)
