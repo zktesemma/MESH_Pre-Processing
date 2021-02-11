@@ -1,31 +1,31 @@
 #=========================================================================================
 # SCRIPT:
-# Mountain MESH model setup script
+# Automated MESH Setup Script
 #
 # DESCRIPTION:
 # This script produces the MESH_drainage_database and MESH_Parameters file (r2c and netcdf) 
 # that are required to run both Mountain and Original MESH versions
 #
 # USER INPUTS:
-#   > A Raster file of the modeling domain a value representing each pixcel unique ID
-#   > An elevation raster of the NWP climate forcing dataset
-#   > An elevation raster of the modeling dataset
-#   > A land cover raster
-#   > A location of the streamflow gauging station
+#   > The modeling domain box that is consistent with the climate forcing data to be used to drive the model
+#   > High resolution elevation (dem).
+#   > Elevation raster of the NWP climate forcing data if available.
+#   > Land cover raster map.
+#   > streamflow gauging stations locations [Longitude and Latitude].
+#   > Reservoirs outlet locations [Longitude and Latitude].
 #
-# REQUIREMENTS:
+# SOFTWARE REQUIREMENTS:
 #   > TauDEM
-#   > R and its packages
+#   > R and the required packages
 #
 # DISCLAIMER:
-# This script is made available for other's use on an "as is" basis, with no warranty,
-# either expressed or implied, as to its fitness for any particular purpose.
-#
+#   > This script is made available for others use on an "as is" basis, with no warranty, either expressed or implied, 
+#     as to its fitness for any particular purpose.
 # AUTHOR: Zelalem Tesemma, GWSI, University of Saskatchewan, zelalem.tesemma@usask.ca
 #
-# HISTORY: 12-Jan-2020  Develop and test the preliminary workflow
-#         15 - Feb - 2020 furhter development and tested on Bow River at Banff
-#=========================================================================================
+# HISTORY: 12-Jan-2020: Developed and tested on Bow River Basin at Banff to check the preliminary work flow
+#          10-Feb-2021: Improved and included various options. Tested on Bow River Basin at Banff
+#=============================================================================================================
 rm(list = ls())
 ## loading libraries
 # install.packages('ncdf4', repos = "http://cran.us.r-project.org")
@@ -47,6 +47,18 @@ ncpath <- "C:/PD/Automated_MESH_Setup_Sample"
 ########### Comment either Mountain or Original MESH model version #########################################################
 MESHVersion <- "Mountain"
 #MESHVersion <- "Original"
+#
+########### Comment either Reservoir or NOReservoir insertion #########################################################
+InsertedReservoir <- "NoReservoir"
+# InsertedReservoir <- "Reservoir"
+if (InsertedReservoir == "Reservoir") {
+#### Reading Reservoir location shapefile or csv file (reservoirs.shp / reservoirs.csv ) lat and long data #######################################
+  reservoirlocation <- read.csv("reservoirs.csv")
+  coordinates(reservoirlocation) = ~ LONGITUDE+LATITUDE
+  # reservoirlocation <- readOGR(dsn = ".", layer = "approxoutlets")
+  # reservoirlocation = SpatialPoints(reservoirlocation)
+}
+#
 ######### Set the minimum GRUs fraction in a give cell and the model grid fraction in the watershed boundary ###############
 Minimum_Basin_Fraction <- 0.001 # Minimum are fraction to ignore for the smallest watershed
 Minimum_GRU_Fraction <- 0.008
@@ -70,7 +82,9 @@ BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_")
 ####### Flow direction numbers
 FdirNumber <- matrix((as.integer(c(0,-1,-1,-1,0,1,1,1,1,1,0,-1,-1,-1,0,1))),8,2)
 ################### Slope and Aspect Classification for GRUs Creations ################################################################################################################
-##### Two slope Classes: (0 - 10) and (> 10) and Tow aspects: North and South Facing can be modified to include other orientations ##############
+##### Land cover and two slope Classes: (0 - 10) and (> 10) and two aspects: North and South Facing can be modified to include other orientations ##############
+landcoverclass <- matrix(c(1,2,3,4,5,6,7,1,2,3,4,5,6,7), nr = 7, nc = 2)
+# landcoverclass <- matrix(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,10), nr = 20, nc = 2)
 slopeclass <- matrix(c(0, 10, 10, 90, 1, 2), nr = 2, nc = 3)
 aspectclass <- matrix(c(0, 90, 270, 90, 270, 360, 1, 2, 1), nr = 3, nc = 3)
 # For 4 quadrants (North, East, South and West) (315 < N <= 45), (45 < E <= 135), (135 < S <= 225), (225 < W <= 315) # From GEM
@@ -88,9 +102,10 @@ URYcorner <- (LLYcorner + (NumRow*YRes))
 ### Import the Hydroshed / MERIT DEM, NWP climate forcing elevation and Land cover data for your model ####################
 domain_dem <- raster("domain_HydroShed_dem.tif")
 # domain_dem <- raster("domain_MERIT_dem.tif")
-#
-domain_landcover <- raster("res90_reclass_domain_landcover_30m_buffered_glaciers.tif")
 # nwp_dem <- raster("nwp_dem.tif")
+#
+domainlandcover <- raster("res90_reclass_domain_landcover_30m_buffered_glaciers.tif")
+domain_landcover <- reclassify(domainlandcover, landcoverclass)
 #
 #### Creating the basin outlet using the lat and long data ##############################################################
 # streamgauge <- data.frame(LONGITUDE = c(-115.5717,-114.5708), LATITUDE = c(51.17222,50.94889))
@@ -98,22 +113,6 @@ streamgauge <- data.frame(LONGITUDE = c(-115.5717), LATITUDE = c(51.17222))
 coordinates(streamgauge) = ~ LONGITUDE+LATITUDE
 crs(streamgauge) <- crs(domain_dem)
 raster::shapefile(streamgauge, "approxoutlets.shp", overwrite=TRUE)
-#
-#### Reading Reservoir location shapefile or csv file (reservoirs.shp / reservoirs.csv ) lat and long data #######################################
-reservoirlocation <- read.csv("reservoirs.csv")
-coordinates(reservoirlocation) = ~ LONGITUDE+LATITUDE
-#
-# reservoirlocation <- readOGR(dsn = ".", layer = "approxoutlets")
-# reservoirlocation = SpatialPoints(reservoirlocation)
-#
-### Import the percent of clay and sand contents for the three soil layers #################
-domain_Clay1 <- raster("domain_Clay1.tif")
-domain_Clay2 <- raster("domain_Clay2.tif")
-domain_Clay3 <- raster("domain_Clay3.tif")
-#
-domain_Sand1 <- raster("domain_Sand1.tif")
-domain_Sand2 <- raster("domain_Sand2.tif")
-domain_Sand3 <- raster("domain_Sand3.tif")
 #
 ############################## Few Change after this except for GRUs discretization Section ################################
 ###########################################################################################################################
@@ -143,12 +142,22 @@ ResFactor  <- ResFactor[1]
 #
 nwp_zone  <- disaggregate(nwp_grid, fact = ResFactor)            # disaggregate nwp_grid
 domain_dem1 <- resample(domain_dem, nwp_zone, method="ngb")
-writeRaster(domain_dem1, "res_domain_HydroShed_dem.tif", datatype="FLT4S", overwrite=TRUE)
+writeRaster(domain_dem1, "resample_domain_dem.tif", datatype="FLT4S", overwrite=TRUE)
 # nwp_elevn <- resample(nwp_dem, nwp_zone, method="bilinear")
 land_cover <- resample(domain_landcover, nwp_zone, method="ngb")
+### Import the percent of clay and sand contents for the three soil layers #################
+#
+domain_Clay1 <- resample(raster("domain_Clay1.tif"), nwp_zone, method="ngb")
+domain_Clay2 <- resample(raster("domain_Clay2.tif"), nwp_zone, method="ngb")
+domain_Clay3 <- resample(raster("domain_Clay3.tif"), nwp_zone, method="ngb")
+#
+domain_Sand1 <- resample(raster("domain_Sand1.tif"), nwp_zone, method="ngb")
+domain_Sand2 <- resample(raster("domain_Sand2.tif"), nwp_zone, method="ngb")
+domain_Sand3 <- resample(raster("domain_Sand3.tif"), nwp_zone, method="ngb")
+#
 ##################### TauDEM approach (DEM post-processing and Watershed Delineation #######################################
 # Pitremove 
-system("mpiexec -n 12 pitremove -z res_domain_HydroShed_dem.tif -fel domain_demfel.tif")
+system("mpiexec -n 12 pitremove -z resample_domain_dem.tif -fel domain_demfel.tif")
 
 # D8 flow directions
 system("mpiexec -n 12 D8Flowdir -p domain_demp.tif -sd8 domain_demsd8.tif -fel domain_demfel.tif",show.output.on.console=F,invisible=F)
@@ -160,9 +169,10 @@ system("mpiexec -n 12 AreaD8 -p domain_demp.tif -ad8 domain_demad8.tif -nc")
 system("mpiexec -n 12 Gridnet -p domain_demp.tif -gord domain_demgord.tif -plen domain_demplen.tif -tlen domain_demtlen.tif")
 
 # Threshold
-system("mpiexec -n 12 Threshold -ssa domain_demad8.tif -src domain_demsrc.tif -thresh 180")
+cmd=paste("mpiexec -n 12 Threshold -ssa domain_demssa.tif -src domain_demsrc.tif -thresh ",MinThresh)
+system(cmd)
 
-# Move Outlets to fall in the flow acculation pixcel
+# Move Outlets to fall in the flow accumulation pixels
 system("mpiexec -n 12 moveoutletstostreams -p domain_demp.tif -src domain_demsrc.tif -o approxoutlets.shp -om outlet.shp")
 #
 ####### Check for the moved outlet ########################################################################################################
@@ -175,10 +185,11 @@ system("mpiexec -n 12 moveoutletstostreams -p domain_demp.tif -src domain_demsrc
 # points(approxpt$shp[2],approxpt$shp[3],pch=19,col=4)
 #
 # Contributing area upstream of outlet
-system("mpiexec -n 12 Aread8 -p domain_demp.tif -o outlet.shp -ad8 domain_demssa.tif")
+system("mpiexec -n 12 AreaD8 -p domain_demp.tif -o outlet.shp -ad8 domain_demssa.tif -nc")
 
 # Threshold
-system("mpiexec -n 12 Threshold -ssa domain_demssa.tif -src domain_demsrc.tif -thresh 180")
+cmd=paste("mpiexec -n 12 Threshold -ssa domain_demssa.tif -src domain_demsrc.tif -thresh ",MinThresh)
+system(cmd)
 
 # # Drop Analysis
 # system("mpiexec -n 8 Dropanalysis -p domain_demp.tif -fel domain_demfel.tif -ad8 domain_demad8.tif -ssa domain_demssa.tif -drp logandrp.txt -o outlet.shp -par 5 500 10 0")
@@ -678,51 +689,15 @@ for (i in 1:nrow(channel_length)) {
 channel_slope[is.na(channel_slope)] <- 0
 channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
 #
-# ## Longest flow path for channel length / slope calculation this may violate some of the assumption of the WATFLOOD routing as it has different length  
-# flow_path_mask0 <- matrix(NA,nrow(fdir2),ncol(fdir2))
-# for (i in 1:8) {
-#   xy <- which(fdir2 == i, arr.ind=TRUE)
-#   xz <- xy
-#   xz[,1] <- (xy[,1] + as.integer(FdirNumber[i,1]))
-#   xz[,2] <- (xy[,2] + as.integer(FdirNumber[i,2]))
-#   flow_path_mask0[xz] <- 1
-# }
-# #
-# flow_path_mask <- raster(flow_path_mask0)
-# extent(flow_path_mask) <- extent(nwp_zone)
-# dim(flow_path_mask) <- dim(nwp_zone)
-# res(flow_path_mask) <- res(nwp_zone)
-# crs(flow_path_mask) <- crs(nwp_zone)
-# #
-# flow_path2 <- mask(flow_path1,mask_fdir3)
-# flow_path3 <- mask(flow_path1,flow_path_mask)
-# ChnlLength1 <- as.matrix(aggregate(flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
-# ChnlLength1[ChnlLength1 == 0] <- 100 # 100 assumed to be the minimum length required to initiate overland flow
-# ChnlLength2 <- as.matrix(aggregate(flow_path3, fact = ResFactor, fun = mean, na.rm=TRUE))
-# ChnlLength1[is.na(ChnlLength1)] <- 0
-# ChnlLength2[is.na(ChnlLength2)] <- 0
-# channel_length <- (ChnlLength1 - ChnlLength2) 
-# 
-# ## River slope in m/m
-# filldem5 <- mask(filldem1, facc_at_outlet1)
-# Elevn_flow_path0 <- as.matrix(aggregate(filldem5, fact = ResFactor, fun = max, na.rm=TRUE))
-# Elevn_flow_path1 <- mask(filldem5,mask_fdir3)
-# Elevn_flow_path2 <- mask(filldem5,flow_path_mask)
-# Elevn_flow_path3 <- as.matrix(aggregate(Elevn_flow_path1, fact = ResFactor, fun = mean, na.rm=TRUE))
-# Elevn_flow_path4 <- as.matrix(aggregate(Elevn_flow_path2, fact = ResFactor, fun = mean, na.rm=TRUE))
-# xz <- which(is.na(Elevn_flow_path4), arr.ind=TRUE)
-# Elevn_flow_path4[xz] <- Elevn_flow_path0[xz]
-# channel_slope <- (Elevn_flow_path4 - Elevn_flow_path3)/ChnlLength
-# channel_slope[is.na(channel_slope)] <- 0.001  # Some grid has zero flow length as the grid area is so small and need to be corrected by setting the minimum slope or remove the small basin area in grid area
-# channel_slope[is.infinite(channel_slope)] <- 0.001
-# channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
-# #
 ## Reach number for lake, reservoir and/or external routing: user can assign number from 1,2,3...with respect to the number of reservoir / lakes 
 nwp_reach  <- (nwp_grid - nwp_grid)
+if (InsertedReservoir == "Reservoir") {
 rescelnum <- extract(nwp_reach, reservoirlocation, cellnumbers=T)
 for (i in 1:length(rescelnum)) { 
 nwp_reach[rescelnum[i]] <- i
+  }
 }
+#
 Reach <- as.matrix(nwp_reach)
 #
 ################## Collecting the drainage database parameters from the above steps
@@ -1033,13 +1008,13 @@ if (MESHVersion == "Mountain") {
 ##### Weight for grid curvature that will be used to calculate wind speed correction parameters
   weight1 = matrix(c(0,1,0,1,0,1,0,1,0), nrow=3)
   weight2 = matrix(c(1,0,1,0,0,0,1,0,1), nrow=3)
-  curve1 <- 0.5*focal(crop(domain_dem, nwp_zone), w=weight1,fun=sum, na.rm=FALSE)
-  curve2 <- 0.5*focal(crop(domain_dem, nwp_zone), w=weight1,fun=sum, na.rm=FALSE) 
-  dem_cell_area <- area(crop(domain_dem, nwp_zone), na.rm=TRUE, weights=FALSE)
+  curve1 <- 0.5*focal(crop(domain_dem1, nwp_zone), w=weight1,fun=sum, na.rm=FALSE)
+  curve2 <- 0.5*focal(crop(domain_dem1, nwp_zone), w=weight1,fun=sum, na.rm=FALSE) 
+  dem_cell_area <- area(crop(domain_dem1, nwp_zone), na.rm=TRUE, weights=FALSE)
   dem_cell_area <- dem_cell_area[!is.na(dem_cell_area)]
   dem_cell_length <- 1000*sqrt(median(dem_cell_area))
   dem_cell_length <- min(dem_cell_length[!is.na(dem_cell_length)],300)
-  curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * crop(domain_dem, nwp_zone)) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
+  curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * crop(domain_dem1, nwp_zone)) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
   #
   basin_elevn <- mask(domain_dem1, PolishedGRUs)
   basin_delta <- mask(delta, PolishedGRUs)
