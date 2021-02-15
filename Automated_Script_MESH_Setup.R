@@ -46,7 +46,7 @@ ncpath <- "C:/PD/Automated_MESH_Setup_Sample"
 #
 ########### Comment either Mountain or Original MESH model version #########################################################
 MESHVersion <- "Mountain"
-#MESHVersion <- "Original"
+# MESHVersion <- "Original"
 #
 ########### Comment either Reservoir or NOReservoir insertion ############################################################
 InsertedReservoir <- "NoReservoir"
@@ -63,9 +63,6 @@ if (InsertedReservoir == "Reservoir") {
 Minimum_Basin_Fraction <- 0.001 # Minimum are fraction to ignore for the smallest watershed
 Minimum_GRU_Fraction <- 0.008
 Minimum_Glacier_Fraction <- 0.0016 # Minimum Glacier area of 0.05 km2
-Number_Soil_Layers <- 3
-###### The value of glacier in the land cover geotiff file 
-GlacierInLandCover <- 2  
 #
 # The maximum number of river class you want to have (IAK - River Classification)
 IAKmax <- 5
@@ -81,17 +78,38 @@ BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_")
 #
 ####### Flow direction numbers
 FdirNumber <- matrix((as.integer(c(0,-1,-1,-1,0,1,1,1,1,1,0,-1,-1,-1,0,1))),8,2)
+#
+SpatialFilter = matrix(1/121, nrow = 11, ncol = 11)
 ################### Slope and Aspect Classification for GRUs Creations ################################################################################################################
 ##### Land cover and two slope Classes: (0 - 10) and (> 10) and two aspects: North and South Facing can be modified to include other orientations ##############
-# landcoverclass <- matrix(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,10), nr = 20, nc = 2)
-landcoverclass <- matrix(c(0,1,2,3,4,5,6,1,2,3,4,5,6,7,1,2,3,4,5,6,7), nr = 7, nc = 3)
-GRUsReclass <- matrix(c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,1,1,1,2,2,2,3,4,5,6,6,6,7,7,7,8,9,10,11,11,11), nr = 21, nc = 3)
+# # For 4 quadrants (North, East, South and West) (315 < N <= 45), (45 < E <= 135), (135 < S <= 225), (225 < W <= 315) # From GEM
+# # For 4 quadrants (North, East, South and West) (292.5 < N <= 67.5), (67.5 < E <= 112.5), (112.5 < S <= 247.5), (247.5 < W <= 292.5) # ESRI ArcGIS
+LandCoverClass <- matrix(c(0,1,2,3,4,5,6,
+                           1,2,3,4,5,6,7,
+                           1,2,3,4,5,6,7), nr = 7, nc = 3)
+###### The value of glacier in the land cover geotiff file 
+GlacierInLandCover <- c(2,999,999)
 #
-slopeclass <- matrix(c(0, 10, 10, 90, 1, 2), nr = 2, nc = 3)
-aspectclass <- matrix(c(0, 90, 270, 90, 270, 360, 1, 2, 1), nr = 3, nc = 3)
-# For 4 quadrants (North, East, South and West) (315 < N <= 45), (45 < E <= 135), (135 < S <= 225), (225 < W <= 315) # From GEM
-# For 4 quadrants (North, East, South and West) (292.5 < N <= 67.5), (67.5 < E <= 112.5), (112.5 < S <= 247.5), (247.5 < W <= 292.5) # ESRI ArcGIS
-########## Set the climate forcing grid domain #################################################################################################
+SlopeClass <- matrix(c(-1, 10, 
+                       10, 90, 
+                       1, 2), nr = 2, nc = 3)
+# 
+AspectClass <- matrix(c(-1, 90, 270,
+                        90, 270, 360,
+                        1, 2, 1), nr = 3, nc = 3)
+#
+GRUsClass <- matrix(c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,
+                      1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
+                      1,1,1,2,2,2,3,4,5,6,6,6,7,7,7,8,9,10,11,11,11), nr = 21, nc = 3)
+#
+# AspectClass <- matrix(c(-1, 315, 135, 45, 225,
+#                         45, 360, 225, 135, 315,
+#                         1, 1, 2, 3, 4), nr = 5, nc = 3)
+# #
+# GRUsClass <- matrix(c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,
+#                       1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,
+#                       1,1,1,1,2,2,2,2,3,4,5,5,6,6,6,6,7,7,7,7,8,9,10,10,11,11,11,11), nr = 28, nc = 3)
+########## Set the climate forcing grid domain ###################################################################################################
 LLXcorner <- -116.75
 LLYcorner <- 50.00
 NumRow <- 15
@@ -105,9 +123,8 @@ URYcorner <- (LLYcorner + (NumRow*YRes))
 domain_dem <- raster("domain_HydroShed_dem.tif")
 # domain_dem <- raster("domain_MERIT_dem.tif")
 # nwp_dem <- raster("nwp_dem.tif")
-#
 domainlandcover <- raster("res90_reclass_domain_landcover_30m_buffered_glaciers.tif")
-domain_landcover <- reclassify(domainlandcover, landcoverclass)
+domain_landcover <- reclassify(domainlandcover, LandCoverClass)
 #
 #### Creating the basin outlet using the lat and long data ##############################################################
 # streamgauge <- data.frame(LONGITUDE = c(-115.5717,-114.5708), LATITUDE = c(51.17222,50.94889))
@@ -115,19 +132,6 @@ streamgauge <- data.frame(LONGITUDE = c(-115.5717), LATITUDE = c(51.17222))
 coordinates(streamgauge) = ~ LONGITUDE+LATITUDE
 crs(streamgauge) <- crs(domain_dem)
 raster::shapefile(streamgauge, "approxoutlets.shp", overwrite=TRUE)
-#
-############################## Few Change after this except for GRUs discretization Section ################################
-###########################################################################################################################
-### Produce the lat long of the center of the forcing grid
-YLat <- matrix(0, NumRow, NumCol, byrow = T)
-XLon <- matrix(0, NumRow, NumCol, byrow = T)
-#
-for (i in 1:NumRow) {
-  for (j in 1:NumCol) {
-    XLon[i,j] <- LLXcorner + (XRes/2) + (j-1)*XRes
-    YLat[i,j] <- LLYcorner + (YRes/2) + (i-1)*XRes
-  }
-}
 #
 #### Produce a raster for the NWP grid which is equal to the modeling grid #########################################
 NumGrids <- matrix(seq(1,(NumRow*NumCol),1), NumRow, NumCol, byrow = T) 
@@ -138,7 +142,6 @@ res(nwp_grid) <- c(XRes, YRes)
 crs(nwp_grid) <- crs(domain_dem) # crs(nwp_grid) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #
 #### Resolving spatial resolution issues ##################################################################################
-############## Common working variable ####################################################################################
 ResFactor <- round(res(nwp_grid)/res(domain_dem))
 ResFactor  <- ResFactor[1]
 #
@@ -147,22 +150,60 @@ domain_dem1 <- resample(domain_dem, nwp_zone, method="ngb")
 writeRaster(domain_dem1, "resample_domain_dem.tif", datatype="FLT4S", overwrite=TRUE)
 # nwp_elevn <- resample(nwp_dem, nwp_zone, method="bilinear")
 land_cover <- resample(domain_landcover, nwp_zone, method="ngb")
-### Import the percent of clay and sand contents for the three soil layers #################
 #
-domain_Clay1 <- resample(raster("domain_Clay1.tif"), nwp_zone, method="ngb")
-domain_Clay2 <- resample(raster("domain_Clay2.tif"), nwp_zone, method="ngb")
-domain_Clay3 <- resample(raster("domain_Clay3.tif"), nwp_zone, method="ngb")
+### Import the percent of clay, sand and Organic Matter contents for the required soil layers #################
+NumbSoilData <- 2 # (2 if only %Clay and %Sand) and (3 if only %Clay, %Sand and %OM) 
 #
-domain_Sand1 <- resample(raster("domain_Sand1.tif"), nwp_zone, method="ngb")
-domain_Sand2 <- resample(raster("domain_Sand2.tif"), nwp_zone, method="ngb")
-domain_Sand3 <- resample(raster("domain_Sand3.tif"), nwp_zone, method="ngb")
+##### Read soil data (%Clay, %Sand and %OM) from geotiff files in the following order where Clay1,Clay2,...then Sand1,Sand2,....) 
+# rlist <- list.files(path = getwd(), pattern = "domain_Clay.*.tif$")
+# for(i in rlist) { assign(unlist(strsplit(i, "[.]"))[1], raster(i)) }
+# rlist <- list.files(path = getwd(), pattern = "domain_Sand.*.tif$")
+# for(i in rlist) { assign(unlist(strsplit(i, "[.]"))[1], raster(i)) }
+# CLAYSANDSOM <- resample(stack(domain_Clay1, domain_Clay2, domain_Clay3, domain_Sand1, domain_Sand2, domain_Sand3), nwp_zone, method="ngb")
 #
-##################### TauDEM approach (DEM post-processing and Watershed Delineation #######################################
+####### Read soil data (%Clay, %Sand and %OM) from NetCDF file in the following order where Clay1,Clay2,...then Sand1,Sand2,....)
+####### DateSet from "Wei Shangguan1 et al., 2014. A global soil data set for earth system modeling"
+CLAY <- brick('CLAY.nc', varname="CLAY")
+SAND <- brick('SAND.nc', varname="SAND")
+#
+CLAY1 <- ((0.45/0.1)*CLAY[[1]] + (0.046/0.1)*CLAY[[2]] + (0.009/0.1)*CLAY[[3]])
+CLAY2 <- ((0.066/0.25)*CLAY[[3]] + (0.123/0.25)*CLAY[[4]] + (0.061/0.25)*CLAY[[5]])
+CLAY3 <- ((0.143/1.946)*CLAY[[5]] + (0.336/1.946)*CLAY[[6]] + (0.554/1.946)*CLAY[[7]] + (0.913/1.946)*CLAY[[8]]) 
+#
+SAND1 <- ((0.45/0.1)*SAND[[1]] + (0.046/0.1)*SAND[[2]] + (0.009/0.1)*SAND[[3]])
+SAND2 <- ((0.066/0.25)*SAND[[3]] + (0.123/0.25)*SAND[[4]] + (0.061/0.25)*SAND[[5]])
+SAND3 <- ((0.143/1.946)*SAND[[5]] + (0.336/1.946)*SAND[[6]] + (0.554/1.946)*SAND[[7]] + (0.913/1.946)*SAND[[8]])
+#
+if (NumbSoilData > 2) {
+SOM <- (1/0.58)*brick('OC.nc', varname="OC")  # To convert Soil organic carbon into Soil organic matter multiply it by a factor of (1/0.58) [Pribyl, 2010].
+SOM1 <- ((0.45/0.1)*SOM[[1]] + (0.046/0.1)*SOM[[2]] + (0.009/0.1)*SOM[[3]])
+SOM2 <- ((0.066/0.25)*SOM[[3]] + (0.123/0.25)*SOM[[4]] + (0.061/0.25)*SOM[[5]])
+SOM3 <- ((0.143/1.946)*SOM[[5]] + (0.336/1.946)*SOM[[6]] + (0.554/1.946)*SOM[[7]] + (0.913/1.946)*SOM[[8]]) 
+CLAYSANDSOM <- resample(brick(CLAY1,CLAY2,CLAY3,SAND1,SAND2,SAND3,SOM1,SOM2,SOM3), nwp_zone, method="ngb") 
+} else {
+CLAYSANDSOM <- resample(brick(CLAY1,CLAY2,CLAY3,SAND1,SAND2,SAND3), nwp_zone, method="ngb")  
+}
+#
+####### Produce the lat long of the center of the forcing grid ####################
+YLat <- matrix(0, NumRow, NumCol, byrow = T)
+XLon <- matrix(0, NumRow, NumCol, byrow = T)
+#
+for (i in 1:NumRow) {
+  for (j in 1:NumCol) {
+    XLon[i,j] <- LLXcorner + (XRes/2) + (j-1)*XRes
+    YLat[i,j] <- LLYcorner + (YRes/2) + (i-1)*XRes
+  }
+}
+#
+#################################################################################################################################################################
+##################### Few Change after this except for GRUs discretization Section ################################
+##################### TauDEM approach (DEM post-processing and Watershed Delineation ##############################
+#################################################################################################################################################################
 # Pitremove 
 system("mpiexec -n 12 pitremove -z resample_domain_dem.tif -fel domain_demfel.tif")
 
 # D8 flow directions
-system("mpiexec -n 12 D8Flowdir -p domain_demp.tif -sd8 domain_demsd8.tif -fel domain_demfel.tif",show.output.on.console=F,invisible=F)
+system("mpiexec -n 12 D8Flowdir -p domain_demp.tif -sd8 domain_demsd8.tif -fel domain_demfel.tif") #,show.output.on.console=F,invisible=F)
 
 # Contributing area
 system("mpiexec -n 12 AreaD8 -p domain_demp.tif -ad8 domain_demad8.tif -nc")
@@ -171,7 +212,7 @@ system("mpiexec -n 12 AreaD8 -p domain_demp.tif -ad8 domain_demad8.tif -nc")
 system("mpiexec -n 12 Gridnet -p domain_demp.tif -gord domain_demgord.tif -plen domain_demplen.tif -tlen domain_demtlen.tif")
 
 # Threshold
-cmd=paste("mpiexec -n 12 Threshold -ssa domain_demssa.tif -src domain_demsrc.tif -thresh ",MinThresh)
+cmd=paste("mpiexec -n 12 Threshold -ssa domain_demad8.tif -src domain_demsrc.tif -thresh ",MinThresh)
 system(cmd)
 
 # Move Outlets to fall in the flow accumulation pixels
@@ -199,7 +240,12 @@ system(cmd)
 # Stream Reach and Watershed
 system("mpiexec -n 8 Streamnet -fel domain_demfel.tif -p domain_demp.tif -ad8 domain_demad8.tif -src domain_demsrc.tif -o outlet.shp -ord domain_demord.tif -tree domain_demtree.txt -coord domain_demcoord.txt -net domain_demnet.shp -w domain_demw.tif")
 # 
-## Collecting the drainage files generated from previous steps ###
+# # Calculate Height Above Nearest Drainage (HAND)
+# # DInf flow directions
+# system("mpiexec -n 8 DinfFlowdir -ang domain_demang.tif -fel domain_demfel.tif",show.output.on.console=F,invisible=F)
+# system("mpiexec -n 8 DinfDistDown -ang domain_demang.tif -fel domain_demfel.tif -src domain_demsrc.tif -m ave v -dd domain_demhand.tif -nc",show.output.on.console=F,invisible=F)
+# #
+######## Collecting the drainage files generated from previous steps ###
 ##########################################################################################################################################
 filldem1 = raster("domain_demfel.tif")
 fdir1 = raster("domain_demp.tif")
@@ -635,7 +681,7 @@ for (i in 1:(IAKmax - 1)) {
 }
 #
 ############# The internal slope in each grid (Land slope in m/m) #####################
-slope <- terrain(domain_dem1, opt = "slope", unit='degrees', neighbors=8)
+slope <- terrain(domain_dem1, opt = "slope", unit='degrees')
 IntSlope1 <- mask(tan(slope*pi/180), facc_at_outlet1)
 IntSlope <- as.matrix(aggregate(IntSlope1, fact = ResFactor, fun = mean, na.rm=TRUE))
 #
@@ -730,77 +776,70 @@ GridArea[is.na(GridArea)] <- 0
 drainagedata <- rbind((apply(grid_rank, 2, rev)), (apply(grid_next, 2, rev)), (apply(DA, 2, rev)), (apply(Bankfull, 2, rev)), 
                       (apply(channel_slope, 2, rev)), (apply(Elev, 2, rev)), (apply(channel_length, 2, rev)), (apply(IAK, 2, rev)),
                       (apply(IntSlope, 2, rev)), (apply(Chnl, 2, rev)), (apply(Reach, 2, rev)), (apply(GridArea, 2, rev)))
-####################################################################################################################################
-### Model discretization and GRUs creation: Combine the land cover, slope and aspect for mountain MESH version and land cover only
-# for Original MESH version ########################################################################################################
-####################################################################################################################################
-xorigin_value <- paste(":xOrigin                 ", LLXcorner, sep = "")
-yorigin_value <- paste(":yOrigin                 ", LLYcorner, sep = "")
-xcount_value <- paste(":xCount                   ", NumCol, sep = "")
-ycount_value <- paste(":yCount                   ", NumRow, sep = "")
-xdelta_value <- paste(":xDelta                   ", XRes, sep = "")
-ydelta_value <- paste(":yDelta                   ", YRes, sep = "")
-###################################################################################################################################
+#
+rm(list=setdiff(ls(), c("nwp_zone", "drainagedata", "facc_at_outlet1", "land_cover", "domain_dem1", "drain_net", "CLAYSANDSOM", "GlacierInLandCover",
+                        "MESHVersion", "NominalGrid_Area", "SpatialFilter", "Minimum_GRU_Fraction", "Minimum_Glacier_Fraction",
+                        "NumRow", "NumCol", "ResFactor" ,"GRUsClass", "AspectClass", "SlopeClass", "Min_Chanel_Slope","BasinName",
+                        "LLXcorner", "LLYcorner", "XRes", "YRes", "grid_rank", "grid_next", "IAKmax", "NumbSoilData")))
+###################################################################################################################################################################
+###################################################################################################################################################################
+#### Masking the land cover by the river basin ######################
 basin_landcover <- mask(land_cover, facc_at_outlet1)
+#
 #
 if (MESHVersion == "Original") {
   grus1 <- basin_landcover }
-##################################################################################################################################
+#
 if (MESHVersion == "Mountain") {
-  ## Calculate Slope and aspect
-  slope <- terrain(domain_dem1, opt = "slope", unit='degrees', neighbors=8)
-  aspect <- terrain(domain_dem1, opt = "aspect", unit='degrees', neighbors=8, flatAspect = NA)  
-  ## Mask the slope and aspect by basin
-  basin_slope <- mask(slope, facc_at_outlet1)
-  basin_aspect <- mask(aspect, facc_at_outlet1)
-  # writeRaster(basin_slope, "R_Slope.tif", datatype="FLT4S", overwrite=TRUE)
-  # writeRaster(basin_aspect, "R_Aspect.tif", datatype="FLT4S", overwrite=TRUE)
-  #
-  ## Calculate the Sine and cosine of aspect expressed in radian for the calculation of the zonal GRUs mean aspect
-  basin_sinaspect <- sin(basin_aspect*pi/180)
-  basin_cosaspect <- cos(basin_aspect*pi/180)
-  ######################### Reclassifying slope and aspect ####################################################################
-  basin_slopeclass <- reclassify(basin_slope, slopeclass)
-  basin_aspectclass <- reclassify(basin_aspect, aspectclass)
-  #
-  ### Model discretization and GRUs creation: Combine the land cover, slope and aspect #############################################
-  grus1 <- basin_landcover
-  for (i in 1 : maxValue(basin_landcover)) {
-    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3*i-2
-    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 3*i-1
-    grus1[basin_landcover == i & basin_slopeclass == 1 & basin_aspectclass <= 2] <- 3*i
-    grus1[basin_landcover == i & basin_slopeclass == 1 & basin_aspectclass <= 1] <- 3*i
-  }
-  grus <- reclassify(grus1, GRUsReclass)
-  grus1 <- grus
-
-  #
-  grus1 <- basin_landcover
-  grus1[basin_landcover == 1] <- 1
-  grus1[basin_landcover == 2] <- 2
-  #
-  grus1[basin_landcover == 3 & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3
-  grus1[basin_landcover == 3 & basin_slopeclass == 2 & basin_aspectclass == 1] <- 4
-  grus1[basin_landcover == 3 & basin_slopeclass == 1 & basin_aspectclass <= 2] <- 5
-  grus1[basin_landcover == 3 & basin_slopeclass == 1 & basin_aspectclass <= 1] <- 5
-  #
-  grus1[basin_landcover == 4] <- 6
-  grus1[basin_landcover == 5] <- 7
-  #
-  grus1[basin_landcover == 6 & basin_slopeclass == 2 & basin_aspectclass == 2] <- 8
-  grus1[basin_landcover == 6 & basin_slopeclass == 2 & basin_aspectclass == 1] <- 9
-  grus1[basin_landcover == 6 & basin_slopeclass == 1 & basin_aspectclass <= 2] <- 10
-  grus1[basin_landcover == 6 & basin_slopeclass == 1 & basin_aspectclass <= 1] <- 10
-  #
-  grus1[basin_landcover == 7] <- 11
+## Calculate Slope and aspect
+slope <- terrain(domain_dem1, opt = "slope", unit='degrees')
+###### Spatial filtering of aspect to remove spikes comment either of the line below
+# aspect <- terrain(domain_dem1, opt = "aspect", unit='degrees', neighbors=8, flatAspect = NA)
+aspect <- focal(terrain(domain_dem1, opt = "aspect", unit='degrees'), SpatialFilter)
+# writeRaster(basin_slope, "R_Slope.tif", datatype="FLT4S", overwrite=TRUE)
+# writeRaster(basin_aspect, "R_Aspect.tif", datatype="FLT4S", overwrite=TRUE)
+#
+## Mask the slope and aspect by basin
+basin_slope <- mask(slope, facc_at_outlet1)
+basin_aspect <- mask(aspect, facc_at_outlet1)
+#
+###### GRUs Creation and model discretization by Combining land cover, slope and aspect################################################## 
+##### for mountain MESH version and land cover only for Original MESH version
+######################### Reclassifying slope and aspect ################################################################################
+basin_slopeclass <- reclassify(basin_slope, SlopeClass)
+basin_aspectclass <- reclassify(basin_aspect, AspectClass)
+# writeRaster(basin_aspectclass, "NR_basin_aspectclass.tif", datatype="FLT4S", overwrite=TRUE)
+#
+### Model discretization and GRUs creation: Combine the land cover, slope and aspect ####################################################
+grus1 <- basin_landcover
+#
+for (i in 1 : maxValue(basin_landcover)) {
+### GRUs discretization when there are two slope aspect classes #########
+grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3*i-2
+grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 3*i-1
+grus1[basin_landcover == i & basin_slopeclass != 2] <- 3*i
+#
+# ### GRUs discretization when there are four slope aspect classes #########
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 4*i-3 #1
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 4*i-2 #2
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 3] <- 4*i-1 #3
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 4] <- 4*i   #4
+# grus1[basin_landcover == i & basin_slopeclass != 2] <- 4*i                            #4
+#
+### grus1[basin_landcover == i & elev_band != 0 & basin_slopeclass != 2 & basin_aspectclass != 0] <- 3*i-2
+#
 }
 #
-# writeRaster(grus1, "GRUs_Produced.tif", datatype="INT2S", overwrite=TRUE)
+grus <- reclassify(grus1, GRUsClass)
+grus1 <- grus
 #
-## Polishing GRUs that have less or equal to the minimum land cover fraction in the modeling grid ################################
+}
+# writeRaster(grus1, "GGRUs_Produced.tif", datatype="INT2S", overwrite=TRUE)
+#
+##### Polishing GRUs that have less or equal to the minimum land cover fraction in the modeling grid ################################
 TotalGrid1 <- zonal(grus1, nwp_zone, 'count', na.rm=TRUE)
 TotalGrid <- as.vector(TotalGrid1[,"count"])
-GRUGrid_Frac <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
+GRUGrid_Frac <- matrix(nrow = NumRow*NumCol, ncol = maxValue(grus1))
 #
 for (i in 1:maxValue(grus1)) {
   grus_mask <- grus1
@@ -819,7 +858,7 @@ for (i in 1:maxValue(grus1)) {
   grusmask <- grus1
   grusmask[grusmask != i] <- NA
   xxGRU_Frac <- GRUGrid_Frac[,i]
-  if (i == GlacierInLandCover) {                                          
+  if (is.element(i, GlacierInLandCover)) {                                          
     xxGRU_Frac[xxGRU_Frac < Minimum_Glacier_Fraction] <- 0 
   } else {
     xxGRU_Frac[xxGRU_Frac < Minimum_GRU_Fraction] <- 0     
@@ -833,7 +872,8 @@ for (i in 1:maxValue(grus1)) {
 }
 #
 PolishedGRUs[PolishedGRUs == 0] <- NA
-################# Calculating fraction of GRUs in the modeling grid ############################################
+# writeRaster(PolishedGRUs, "PolishedGRUs.tif", datatype="INT2S", overwrite=TRUE)
+##### Calculating fraction of GRUs in the modeling grid ############################################
 grus2 <- zonal(PolishedGRUs, nwp_zone, 'count', na.rm=TRUE)
 grus3 <- as.vector(grus2[,"count"])
 grus4 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
@@ -848,37 +888,36 @@ for (i in 1:maxValue(grus1)) {
 grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
 #
 for (i in 1:(maxValue(grus1)+1)) {
-  grus5 <- matrix(grus4[,i], nrow(nwp_grid), ncol(nwp_grid), byrow = T)
+  grus5 <- matrix(grus4[,i], NumRow, NumCol, byrow = T)
   grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(grus5, 2, rev)
 }
 grus_frac_r2c[is.na(grus_frac_r2c)] <- 0
 ##
 ### Combine the drainage data and fraction of GRUs for MESH_drainage_database file
-dranage_database <- rbind(drainagedata,grus_frac_r2c)
+dranage_database <- rbind(drainagedata, grus_frac_r2c)
+#
+######### common data for MESH_drainage_database and MESH_parameters files ########################
+xorigin_value <- paste(":xOrigin                 ", LLXcorner, sep = "")
+yorigin_value <- paste(":yOrigin                 ", LLYcorner, sep = "")
+xcount_value <- paste(":xCount                   ", NumCol, sep = "")
+ycount_value <- paste(":yCount                   ", NumRow, sep = "")
+xdelta_value <- paste(":xDelta                   ", XRes, sep = "")
+ydelta_value <- paste(":yDelta                   ", YRes, sep = "")
 ########################################################################################################
 ## Creating MESH drainage database file and save it as MESH_drainage_database.r2c
 ########################################################################################################
 ## Add source file name to header and required information for the drainage database file header
-##
-NominalGrid_Length <- sqrt(NominalGrid_Area)*1000
-NominalGrid_Area_Value <- paste(":NominalGridSize_AL   ",NominalGrid_Length, sep = "")
-contour_interval <- 1
-contour_interval_value <- paste(":ContourInterval   ",contour_interval, sep = "")
-Impervious_Area <- 0
-Impervious_Area_value <- paste(":ImperviousArea   ",Impervious_Area, sep = "")
-Class_Count <- maxValue(grus1) + 1
-class_count_value <- paste(":ClassCount   ",Class_Count, sep = "")
-NumRiver_Classes <- 1
-NumRiver_Classes_value <- paste(":NumRiverClasses   ",NumRiver_Classes, sep = "")
-Elev_Conversion <- 1
-Elev_Conversion_value <- paste(":ElevConversion   ",Elev_Conversion, sep = "")
+NominalGrid_Area_Value <- paste(":NominalGridSize_AL   ",round(sqrt(NominalGrid_Area)*1000, 2), sep = "")
+contour_interval_value <- paste(":ContourInterval   ",1, sep = "")
+Impervious_Area_value <- paste(":ImperviousArea   ",0, sep = "")
+class_count_value <- paste(":ClassCount   ",maxValue(grus1) + 1, sep = "")
+NumRiver_Classes_value <- paste(":NumRiverClasses   ",IAKmax, sep = "")
+Elev_Conversion_value <- paste(":ElevConversion   ",1, sep = "")
 Total_NumOfGrids_value <- paste(":TotalNumOfGrids   ",(length(which(grid_rank != 0))), sep = "")  
 NumGridsIn_Basin_value <- paste(":NumGridsInBasin   ",(length(which(grid_next != 0))), sep = "") 
-Minimum_Slope <- Min_Chanel_Slope
-Minimum_Slope_value <- paste(":MinimumSlope   ",Minimum_Slope, sep = "")
+Minimum_Slope_value <- paste(":MinimumSlope   ",Min_Chanel_Slope, sep = "")
 ProjectionName <- "LATLONG"
 DatumName <- "WGS84"
-#####
 projection_value <- ":Projection              LATLONG   "
 Ellipsoid_value <- ":Ellipsoid               WGS84 "
 #
@@ -899,7 +938,7 @@ header1 <- c(header1, written_by)
 creation_date <- paste(":CreationDate ", date(), sep = "")
 header1 <- c(header1, creation_date, "#", "#------------------------------------------------------------------------")
 # add source file name to header
-sourcefile <- ":SourceFile              DEM from Hydroshed and Land Cover from COE"
+sourcefile <- ":SourceFile              DEM from Hydroshed and Land Cover from CEC"
 header1 <- c(header1, sourcefile)
 header1 <- c(header1, NominalGrid_Area_Value)
 header1 <- c(header1, contour_interval_value)
@@ -946,7 +985,7 @@ attributename <- ":AttributeName 12 GridArea"
 attributeunit <- ":AttributeUnits 12 m^2"
 header1 <- c(header1, attributename, attributeunit)
 ##
-for (i in 1:(1+maxValue(grus1))) {
+for (i in 1:(1 + maxValue(grus1))) {
   j = i + 12
   attributename <- paste(":AttributeName",j,"Class",i,"(",i,")")
   attributeunit <- paste(":AttributeUnits ",j," 0-1")
@@ -971,29 +1010,19 @@ for (row in 1:nrow(dranage_database)) {
 #######################################################################################################
 ## Creating the Mountain MESH Parameter file and save it as MESH_Parameter.r2c
 ######################################################################################################
-## Soil data for MESH_parameters file
-Clay1 <- as.matrix(aggregate(mask(domain_Clay1, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-Clay2 <- as.matrix(aggregate(mask(domain_Clay2, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-Clay3 <- as.matrix(aggregate(mask(domain_Clay3, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-#
-Sand1 <- as.matrix(aggregate(mask(domain_Sand1, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-Sand2 <- as.matrix(aggregate(mask(domain_Sand2, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-Sand3 <- as.matrix(aggregate(mask(domain_Sand3, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
-#
-Clay11 <- apply(Clay1, 2, rev)
-Clay22 <- apply(Clay2, 2, rev)
-Clay33 <- apply(Clay3, 2, rev)
-#
-Sand11 <- apply(Sand1, 2, rev)
-Sand22 <- apply(Sand2, 2, rev)
-Sand33 <- apply(Sand3, 2, rev)
-#
-soildatabase <- rbind(Clay11,Clay22,Clay33,Sand11,Sand22,Sand33)
+######## Soil data for MESH_parameters file
+ClaySandSomMasked <- as.array(aggregate(mask(CLAYSANDSOM, facc_at_outlet1), fact = ResFactor, fun = mean, na.rm=TRUE))
+ClaySandSomData <- apply(ClaySandSomMasked, c(2,3), rev)
+soildatabase <- matrix(nrow = NumRow*dim(ClaySandSomData)[3], ncol = NumCol)
+for (i in 1 : dim(ClaySandSomData)[3]) {
+soildatabase[(NumRow*i-(NumRow-1)):(NumRow*i),] <- ClaySandSomData[,,i]
+}
 soildatabase[is.na(soildatabase)] <- 0
+Number_Soil_Layers <- as.integer(dim(ClaySandData)[3]/NumbSoilData)
 #
 ############### compute drainage density in the modeling grid ###
 drain_net[drain_net == 0] <- NA
-basin_DN <- mask(crop(drain_net, nwp_zone), facc_at_outlet1)
+basin_DN <- mask(drain_net, facc_at_outlet1)
 basin_nwp_zone <- mask(nwp_zone, facc_at_outlet1)
 #
 dn_cell_length <- sqrt(2) * sqrt(area(basin_DN, na.rm=TRUE, weights=FALSE))
@@ -1008,6 +1037,8 @@ drainge_dens <- apply(as.matrix(drainge_dens1), 2, rev)
 #
 if (MESHVersion == "Mountain") {
 #### Calculate Slope, aspect, delta (difference in elevation between the nwp_elevation and model_elevation)
+#  domain_dem1 <- focal(domain_dem1, SpatialFilter)
+  #
   elev_max1 <- aggregate(domain_dem1, fact = ResFactor, fun = max, na.rm=TRUE)
   elev_max <- disaggregate(elev_max1, fact = ResFactor, fun = max, na.rm=TRUE)
   elev_mean1 <- aggregate(domain_dem1, fact = ResFactor, fun = mean, na.rm=TRUE)
@@ -1026,6 +1057,7 @@ if (MESHVersion == "Mountain") {
   dem_cell_length <- 1000*sqrt(median(dem_cell_area))
   dem_cell_length <- min(dem_cell_length[!is.na(dem_cell_length)],300)
   curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * crop(domain_dem1, nwp_zone)) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
+#  curve_Max <- 2.0 * disaggregate(aggregate(abs(curve), fact = ResFactor, fun = max, na.rm=TRUE), fact = ResFactor, fun = max, na.rm=TRUE)
   #
   basin_elevn <- mask(domain_dem1, PolishedGRUs)
   basin_delta <- mask(delta, PolishedGRUs)
@@ -1033,6 +1065,8 @@ if (MESHVersion == "Mountain") {
   basin_slope0 <- mask(slope, PolishedGRUs)
   basin_aspect0 <- mask(aspect, PolishedGRUs)
   basin_curve <- mask(curve, PolishedGRUs)
+#  basin_curve <- mask((curve/curve_Max), PolishedGRUs)
+  #
 ###### Calculate the Sine and cosine of aspect expressed in radian for the calculation of the zonal GRUs mean aspect
   basin_sinaspect <- sin(basin_aspect0*pi/180)
   basin_cosaspect <- cos(basin_aspect0*pi/180)
@@ -1109,7 +1143,7 @@ header1 <- c(header1, xorigin_value, yorigin_value, "#")
 ##
 if (MESHVersion == "Mountain") {
   #  
-  for (i in 1:Number_Soil_Layers) {
+  for (i in 1 : Number_Soil_Layers) {
     j <- i 
     attributename <- paste(":AttributeName ", j, " Clay	", i, "")
     header1 <- c(header1, attributename)
@@ -1118,12 +1152,22 @@ if (MESHVersion == "Mountain") {
     
   }
   #
-  for (i in 1:Number_Soil_Layers) {
+  for (i in 1 : Number_Soil_Layers) {
     j <- j + 1
     attributename <- paste(":AttributeName ", j, " Sand	", i, "")
     header1 <- c(header1, attributename)
     attributeunits <- paste(":AttributeUnits ", j, " % ")
     header1 <- c(header1, attributeunits)
+  }
+  #
+  if (NumbSoilData > 3) {
+  for (i in 1 : Number_Soil_Layers) {
+    j <- j + 1
+    attributename <- paste(":AttributeName ", j, " Organic Matter	", i, "")
+    header1 <- c(header1, attributename)
+    attributeunits <- paste(":AttributeUnits ", j, " % ")
+    header1 <- c(header1, attributeunits)
+   }
   }
   #
   for (i in 1:maxValue(grus1)) {
@@ -1183,20 +1227,33 @@ if (MESHVersion == "Mountain") {
     cat(meshparams, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), append = TRUE)
   }
 } else {
-  ######## Uncomment the lines below if there is soil database
-  for (i in 1:Number_Soil_Layers) {
+#
+  for (i in 1 : Number_Soil_Layers) {
     j <- i
     attributename <- paste(":AttributeName ", j, " Clay	", i, "")
     header1 <- c(header1, attributename)
+    attributeunits <- paste(":AttributeUnits ", j, " % ")
+    header1 <- c(header1, attributeunits)
   }
-  #
-  for (i in 1:Number_Soil_Layers) {
+#
+  for (i in 1 : Number_Soil_Layers) {
     j <- j + 1
     attributename <- paste(":AttributeName ", j, " Sand	", i, "")
     header1 <- c(header1, attributename)
+    attributeunits <- paste(":AttributeUnits ", j, " % ")
+    header1 <- c(header1, attributeunits)
   }
   #
-  j <- 0
+  if (NumbSoilData > 3) {
+  for (i in 1 : Number_Soil_Layers) {
+    j <- j + 1
+    attributename <- paste(":AttributeName ", j, " Organic Matter	", i, "")
+    header1 <- c(header1, attributename)
+    attributeunits <- paste(":AttributeUnits ", j, " % ")
+    header1 <- c(header1, attributeunits)
+   }
+  }
+  #
   j <- j + 1
   attributename <- paste(":AttributeName ", j, " xslp	")
   header1 <- c(header1, attributename)
@@ -1226,3 +1283,4 @@ if (MESHVersion == "Mountain") {
 }
 ###########################################################################################################################
 ###########################################################################################################################
+
