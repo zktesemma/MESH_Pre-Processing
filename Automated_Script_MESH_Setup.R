@@ -166,17 +166,17 @@ NumbSoilData <- 2 # (2 if only %Clay and %Sand) and (3 if only %Clay, %Sand and 
 CLAY <- brick('CLAY.nc', varname="CLAY")
 SAND <- brick('SAND.nc', varname="SAND")
 #
-CLAY1 <- ((0.45/0.1)*CLAY[[1]] + (0.046/0.1)*CLAY[[2]] + (0.009/0.1)*CLAY[[3]])
+CLAY1 <- ((0.045/0.1)*CLAY[[1]] + (0.046/0.1)*CLAY[[2]] + (0.009/0.1)*CLAY[[3]])
 CLAY2 <- ((0.066/0.25)*CLAY[[3]] + (0.123/0.25)*CLAY[[4]] + (0.061/0.25)*CLAY[[5]])
 CLAY3 <- ((0.143/1.946)*CLAY[[5]] + (0.336/1.946)*CLAY[[6]] + (0.554/1.946)*CLAY[[7]] + (0.913/1.946)*CLAY[[8]]) 
 #
-SAND1 <- ((0.45/0.1)*SAND[[1]] + (0.046/0.1)*SAND[[2]] + (0.009/0.1)*SAND[[3]])
+SAND1 <- ((0.045/0.1)*SAND[[1]] + (0.046/0.1)*SAND[[2]] + (0.009/0.1)*SAND[[3]])
 SAND2 <- ((0.066/0.25)*SAND[[3]] + (0.123/0.25)*SAND[[4]] + (0.061/0.25)*SAND[[5]])
 SAND3 <- ((0.143/1.946)*SAND[[5]] + (0.336/1.946)*SAND[[6]] + (0.554/1.946)*SAND[[7]] + (0.913/1.946)*SAND[[8]])
 #
 if (NumbSoilData > 2) {
 SOM <- (1/0.58)*brick('OC.nc', varname="OC")  # To convert Soil organic carbon into Soil organic matter multiply it by a factor of (1/0.58) [Pribyl, 2010].
-SOM1 <- ((0.45/0.1)*SOM[[1]] + (0.046/0.1)*SOM[[2]] + (0.009/0.1)*SOM[[3]])
+SOM1 <- ((0.045/0.1)*SOM[[1]] + (0.046/0.1)*SOM[[2]] + (0.009/0.1)*SOM[[3]])
 SOM2 <- ((0.066/0.25)*SOM[[3]] + (0.123/0.25)*SOM[[4]] + (0.061/0.25)*SOM[[5]])
 SOM3 <- ((0.143/1.946)*SOM[[5]] + (0.336/1.946)*SOM[[6]] + (0.554/1.946)*SOM[[7]] + (0.913/1.946)*SOM[[8]]) 
 CLAYSANDSOM <- resample(brick(CLAY1,CLAY2,CLAY3,SAND1,SAND2,SAND3,SOM1,SOM2,SOM3), nwp_zone, method="ngb") 
