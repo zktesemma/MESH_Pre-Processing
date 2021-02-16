@@ -1025,7 +1025,7 @@ for (i in 1 : dim(ClaySandSomData)[3]) {
 soildatabase[(NumRow*i-(NumRow-1)):(NumRow*i),] <- ClaySandSomData[,,i]
 }
 soildatabase[is.na(soildatabase)] <- 0
-Number_Soil_Layers <- as.integer(dim(ClaySandData)[3]/NumbSoilData)
+Number_Soil_Layers <- as.integer(dim(ClaySandSomData)[3]/NumbSoilData)
 #
 ############### compute drainage density in the modeling grid ###
 drain_net[drain_net == 0] <- NA
