@@ -79,7 +79,7 @@ BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_")
 ####### Flow direction numbers
 FdirNumber <- matrix((as.integer(c(0,-1,-1,-1,0,1,1,1,1,1,0,-1,-1,-1,0,1))),8,2)
 #
-SpatialFilter = matrix(1/121, nrow = 11, ncol = 11)
+SpatialFilter = matrix(1/25, nrow = 5, ncol = 5)
 ################### Slope and Aspect Classification for GRUs Creations ################################################################################################################
 ##### Land cover and two slope Classes: (0 - 10) and (> 10) and two aspects: North and South Facing can be modified to include other orientations ##############
 # # For 4 quadrants (North, East, South and West) (315 < N <= 45), (45 < E <= 135), (135 < S <= 225), (225 < W <= 315) # From GEM
@@ -841,15 +841,18 @@ grus1 <- grus
 # writeRaster(grus1, "GGRUs_Produced.tif", datatype="INT2S", overwrite=TRUE)
 #
 ##### Polishing GRUs that have less or equal to the minimum land cover fraction in the modeling grid ################################
-TotalGrid1 <- zonal(grus1, nwp_zone, 'count', na.rm=TRUE)
-TotalGrid <- as.vector(TotalGrid1[,"count"])
+grus_mask <- grus1
+grus_mask[grus_mask != 1] <- 1
+TotalGrid <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
+#
 GRUGrid_Frac <- matrix(nrow = NumRow*NumCol, ncol = maxValue(grus1))
 #
 for (i in 1:maxValue(grus1)) {
   grus_mask <- grus1
   grus_mask[grus_mask != i] <- NA
-  GRU_Frac <- zonal(grus_mask, nwp_zone, 'count', na.rm=TRUE)
-  GRUGrid_Frac[,i] <- (as.vector(GRU_Frac[,"count"])/TotalGrid)
+  grus_mask[grus_mask == i] <- 1
+  GRU_Frac <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
+  GRUGrid_Frac[,i] <- as.vector(GRU_Frac/TotalGrid)
 }
 GRUGrid_Frac[is.na(GRUGrid_Frac)] <- 0
 #
@@ -878,22 +881,22 @@ for (i in 1:maxValue(grus1)) {
 PolishedGRUs[PolishedGRUs == 0] <- NA
 # writeRaster(PolishedGRUs, "PolishedGRUs.tif", datatype="INT2S", overwrite=TRUE)
 ##### Calculating fraction of GRUs in the modeling grid ############################################
-grus2 <- zonal(PolishedGRUs, nwp_zone, 'count', na.rm=TRUE)
-grus3 <- as.vector(grus2[,"count"])
-grus4 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
+grus_mask <- PolishedGRUs
+grus_mask[grus_mask == i] <- 1
+grus2 <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
+#
+grus3 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
 #
 for (i in 1:maxValue(grus1)) {
   grus_mask <- PolishedGRUs
   grus_mask[grus_mask != i] <- NA
-  grus5 <- zonal(grus_mask, nwp_zone, 'count', na.rm=TRUE)
-  grus6 <- as.vector(grus5[,"count"])
-  grus4[,i] <- (grus6/grus3)
+  grus_mask[grus_mask == i] <- 1
+  grus3[,i] <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)/grus2)
 }
 grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
 #
 for (i in 1:(maxValue(grus1)+1)) {
-  grus5 <- matrix(grus4[,i], NumRow, NumCol, byrow = T)
-  grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(grus5, 2, rev)
+  grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(grus3[,i], NumRow, NumCol, byrow = T)), 2, rev)
 }
 grus_frac_r2c[is.na(grus_frac_r2c)] <- 0
 ##
