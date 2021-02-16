@@ -322,8 +322,12 @@ rank1 <- rank(-elevn1, ties.method= "first", na.last = "keep")
 ## Modeling Grid Rank number - that gives order of computation
 grid_rank  <- matrix(rank1, NumRow, NumCol)
 xx <- which(grid_rank == max(grid_rank,na.rm=TRUE), arr.ind=TRUE)
-xx[,2] <- xx[,2] + 1
-grid_rank[xx] <- (max(grid_rank,na.rm=TRUE) + 1)
+for (i in 1:8) {{
+xxx <- (xx + as.integer(FdirNumber[i,]))
+if (is.na(grid_rank[xxx])) {
+grid_rank[xxx] <- (max(grid_rank,na.rm=TRUE) + 1)
+break
+}}}
 #
 rank2 <- raster(grid_rank)
 extent(rank2) <- extent(nwp_grid)
