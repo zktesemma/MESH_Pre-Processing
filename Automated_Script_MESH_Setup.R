@@ -843,7 +843,7 @@ grus1 <- grus
 ##### Polishing GRUs that have less or equal to the minimum land cover fraction in the modeling grid ################################
 grus_mask <- grus1
 grus_mask[grus_mask != 1] <- 1
-TotalGrid <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
+TotalGrid <- aggregate(grus_mask, fact = ResFactor, sum, na.rm=TRUE)
 #
 GRUGrid_Frac <- matrix(nrow = NumRow*NumCol, ncol = maxValue(grus1))
 #
@@ -851,7 +851,7 @@ for (i in 1:maxValue(grus1)) {
   grus_mask <- grus1
   grus_mask[grus_mask != i] <- NA
   grus_mask[grus_mask == i] <- 1
-  GRU_Frac <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
+  GRU_Frac <- aggregate(grus_mask, fact = ResFactor, sum, na.rm=TRUE)
   GRUGrid_Frac[,i] <- as.vector(GRU_Frac/TotalGrid)
 }
 GRUGrid_Frac[is.na(GRUGrid_Frac)] <- 0
@@ -882,7 +882,7 @@ PolishedGRUs[PolishedGRUs == 0] <- NA
 # writeRaster(PolishedGRUs, "PolishedGRUs.tif", datatype="INT2S", overwrite=TRUE)
 ##### Calculating fraction of GRUs in the modeling grid ############################################
 grus_mask <- PolishedGRUs
-grus_mask[grus_mask != 1] <- NA
+grus_mask[grus_mask == i] <- 1
 grus2 <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
 #
 grus3 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
