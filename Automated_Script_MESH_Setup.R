@@ -882,7 +882,7 @@ PolishedGRUs[PolishedGRUs == 0] <- NA
 # writeRaster(PolishedGRUs, "PolishedGRUs.tif", datatype="INT2S", overwrite=TRUE)
 ##### Calculating fraction of GRUs in the modeling grid ############################################
 grus_mask <- PolishedGRUs
-grus_mask[grus_mask == i] <- 1
+grus_mask[grus_mask != 1] <- NA
 grus2 <- aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
 #
 grus3 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
