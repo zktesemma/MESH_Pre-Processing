@@ -1064,15 +1064,15 @@ if (MESHVersion == "Mountain") {
   dem_cell_length <- 1000*sqrt(median(dem_cell_area))
   dem_cell_length <- min(dem_cell_length[!is.na(dem_cell_length)],300)
   curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * crop(domain_dem1, nwp_zone)) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
-#  curve_Max <- 2.0 * disaggregate(aggregate(abs(curve), fact = ResFactor, fun = max, na.rm=TRUE), fact = ResFactor, fun = max, na.rm=TRUE)
+  curve_Max <- 2.0 * disaggregate(aggregate(abs(curve), fact = ResFactor, fun = max, na.rm=TRUE), fact = ResFactor, fun = max, na.rm=TRUE)
   #
   basin_elevn <- mask(domain_dem1, PolishedGRUs)
   basin_delta <- mask(delta, PolishedGRUs)
   basin_delta_elev_max <- mask(delta_elev_max, PolishedGRUs)
   basin_slope0 <- mask(slope, PolishedGRUs)
   basin_aspect0 <- mask(aspect, PolishedGRUs)
-  basin_curve <- mask(curve, PolishedGRUs)
-#  basin_curve <- mask((curve/curve_Max), PolishedGRUs)
+#  basin_curve <- mask(curve, PolishedGRUs)
+  basin_curve <- mask((curve/curve_Max), PolishedGRUs)
   #
 ###### Calculate the Sine and cosine of aspect expressed in radian for the calculation of the zonal GRUs mean aspect
   basin_sinaspect <- sin(basin_aspect0*pi/180)
@@ -1123,8 +1123,9 @@ if (MESHVersion == "Mountain") {
   soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,elevnslopeaspectdeltacurve,drainge_dens)
 } else {
 ######## Combine Soil, slope and drainage density for MESH_parameters file
-  gridslope0 <- as.matrix(aggregate(basin_slope, fact = ResFactor, fun = mean, na.rm=TRUE))
+  gridslope0 <- as.matrix(aggregate(tan(basin_slope*pi/180), fact = ResFactor, fun = mean, na.rm=TRUE))
   gridslope <- apply(gridslope0, 2, rev)
+  gridslope[is.na(gridslope)] <- 0
   soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,gridslope,drainge_dens)
   #
 }
