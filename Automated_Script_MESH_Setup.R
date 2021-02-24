@@ -1168,7 +1168,7 @@ if (MESHVersion == "Mountain") {
     header1 <- c(header1, attributeunits)
   }
   #
-  if (NumbSoilData > 3) {
+  if (NumbSoilData > 2) {
   for (i in 1 : Number_Soil_Layers) {
     j <- j + 1
     attributename <- paste(":AttributeName ", j, " Organic Matter	", i, "")
@@ -1252,7 +1252,7 @@ if (MESHVersion == "Mountain") {
     header1 <- c(header1, attributeunits)
   }
   #
-  if (NumbSoilData > 3) {
+  if (NumbSoilData > 2) {
   for (i in 1 : Number_Soil_Layers) {
     j <- j + 1
     attributename <- paste(":AttributeName ", j, " Organic Matter	", i, "")
