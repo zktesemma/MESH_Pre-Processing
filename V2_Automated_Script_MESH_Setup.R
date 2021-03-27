@@ -155,9 +155,9 @@ model_nwp_dem <- resample(nwp_dem, nwp_zone, method="bilinear")
 # domainglaciercover <- raster("rgi60_glaciers.tif")
 # domainglaciercover[domainglaciercover != 2] <- 2
 # domainlandcover <- raster("res30_reclass_domain_landcover.tif")
-# domainlandcover[domainlandcover == 2] <- 10
+# domainlandcover[domainlandcover == 2] <- 99
 # domainlandcover[domainglaciercover == 2] <- 2
-# domainlandcover[domainlandcover == 10] <- 3
+# domainlandcover[domainlandcover == 99] <- 3
 # domain_landcover <- reclassify(domainlandcover, LandCoverClass)
 # land_cover <- resample(domain_landcover, nwp_zone, method="ngb")
 # writeRaster(land_cover, "res30_reclass_domain_landcover_glacier_corrected.tif", datatype="INT2S", overwrite=TRUE)
