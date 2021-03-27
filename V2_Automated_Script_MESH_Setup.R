@@ -147,13 +147,18 @@ domain_dem1 <- resample(domain_dem, nwp_zone, method="bilinear")
 writeRaster(domain_dem1, "resample_domain_dem.tif", datatype="FLT4S", overwrite=TRUE)
 #
 ### Import the Land cover data for the model domain and preprocess it for future use ####################
-# domainglaciercover <- raster("rgi60_glaciers.tif")
-# domainglaciercover[domainglaciercover != 2] <- 2
-# domainlandcover <- raster("res30_reclass_domain_landcover.tif")
+# domainlandcover <- raster("domain_landcover.tif")
+# domain_landcover <- reclassify(domainlandcover, LandCoverClass)
 # domainlandcover[domainlandcover == 2] <- 99
+# #
+# Dissolved_RGI_Glacier_Map  <- readOGR('Dissolved_RGI_Glacier_Map.shp')
+# domainglaciercover <- rasterize(Dissolved_RGI_Glacier_Map, domainlandcover)
+# domainglaciercover[domainglaciercover != 2] <- 2
+# writeRaster(domainglaciercover, "rgi60_glaciers.tif", datatype="INT2S", overwrite=TRUE)
+# #
 # domainlandcover[domainglaciercover == 2] <- 2
 # domainlandcover[domainlandcover == 99] <- 3
-# domain_landcover <- reclassify(domainlandcover, LandCoverClass)
+# 
 # land_cover <- resample(domain_landcover, nwp_zone, method="ngb")
 # writeRaster(land_cover, "res30_reclass_domain_landcover_glacier_corrected.tif", datatype="INT2S", overwrite=TRUE)
 land_cover <- raster("res30_reclass_domain_landcover_glacier_corrected.tif")
