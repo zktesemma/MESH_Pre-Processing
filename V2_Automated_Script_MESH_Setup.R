@@ -146,11 +146,6 @@ nwp_zone  <- disaggregate(nwp_grid, fact = ResFactor)            # disaggregate 
 domain_dem1 <- resample(domain_dem, nwp_zone, method="bilinear")
 writeRaster(domain_dem1, "resample_domain_dem.tif", datatype="FLT4S", overwrite=TRUE)
 #
-###### Read and preprocess NWP climate forcing elevation data for model domain
-nwp_dem <- raster("domain_GEM_dem.tif")
-# nwp_dem <- raster("bow_domain_10km_GEM_Elevation_20031218.tif")
-model_nwp_dem <- resample(nwp_dem, nwp_zone, method="bilinear")
-#
 ### Import the Land cover data for the model domain and preprocess it for future use ####################
 # domainglaciercover <- raster("rgi60_glaciers.tif")
 # domainglaciercover[domainglaciercover != 2] <- 2
@@ -182,6 +177,10 @@ crs(streamgauge) <- crs(domain_dem)
 raster::shapefile(streamgauge, "approxoutlets.shp", overwrite=TRUE)
 #
 if (MESHVersion == "Mountain") {
+###### Read and preprocess NWP climate forcing elevation data for model domain
+# nwp_dem <- raster("domain_GEM_dem.tif")
+# nwp_dem <- raster("bow_domain_10km_GEM_Elevation_20031218.tif")
+# model_nwp_dem <- resample(nwp_dem, nwp_zone, method="bilinear")
 #### Calculate the maximum and mean elevation and delta (difference in elevation between the nwp_elevation (if available) and the high resolution dem)
  elev_max1 <- aggregate(domain_dem1, fact = ResFactor, fun = max, na.rm=TRUE)
  elev_max <- disaggregate(elev_max1, fact = ResFactor, fun = max, na.rm=TRUE)
