@@ -836,9 +836,9 @@ drainagedata <- rbind((apply(grid_rank, 2, rev)), (apply(grid_next, 2, rev)), (a
                       (apply(IntSlope, 2, rev)), (apply(Chnl, 2, rev)), (apply(Reach, 2, rev)), (apply(GridArea, 2, rev)))
 #
 rm(list=setdiff(ls(), c("nwp_zone", "drainagedata", "facc_at_outlet1", "land_cover", "domain_dem1", "drain_net", "CLAYSANDSOM", "GlacierInLandCover",
-                         "MESHVersion", "NominalGrid_Area", "SpatialFilter", "Minimum_GRU_Fraction", "Minimum_Glacier_Fraction",
-                         "NumRow", "NumCol", "ResFactor" ,"GRUsClass", "AspectClass", "SlopeClass", "Min_Chanel_Slope","BasinName",
-                         "LLXcorner", "LLYcorner", "XRes", "YRes", "grid_rank", "grid_next", "IAKmax", "NumbSoilData", "delta", "delta_elev_max", "elev_band")))
+                        "MESHVersion", "NominalGrid_Area", "SpatialFilter", "Minimum_GRU_Fraction", "Minimum_Glacier_Fraction", "UpdateIrrigation", "domain_irrRes",
+                        "NumRow", "NumCol", "ResFactor" ,"GRUsClass", "AspectClass", "SlopeClass", "Min_Chanel_Slope","BasinName", "NominalGridSize",
+                        "LLXcorner", "LLYcorner", "XRes", "YRes", "grid_rank", "grid_next", "IAKmax", "NumbSoilData", "delta", "delta_elev_max", "elev_band")))
 ###################################################################################################################################################################
 ###################################################################################################################################################################
 #### Masking the land cover by the river basin ######################
