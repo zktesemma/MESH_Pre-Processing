@@ -57,10 +57,10 @@ UpdateIrrigation <- "NoIrrigation"
 ########### Prepare the location file for Reservoir insertion ############################################################
 if (InsertedReservoir == "Reservoir") {
 #### Reading Reservoir location shapefile or csv file (reservoirs.shp / reservoirs.csv ) of lat-long of resevoir outlet ##
-  reservoirlocation <- read.csv("reservoirs.csv")
-  coordinates(reservoirlocation) = ~ LONGITUDE+LATITUDE
-  # reservoirlocation <- readOGR(dsn = ".", layer = "approxoutlets")
-  # reservoirlocation = SpatialPoints(reservoirlocation)
+reservoirlocation <- read.csv("reservoirs.csv")
+coordinates(reservoirlocation) = ~ LONGITUDE+LATITUDE
+# reservoirlocation <- readOGR(dsn = ".", layer = "approxoutlets")
+# reservoirlocation = SpatialPoints(reservoirlocation)
 }
 #
 ######### Set the minimum GRUs fraction in a give cell and the model grid fraction in the watershed boundary ###############
@@ -187,13 +187,13 @@ if (MESHVersion == "Mountain") {
 # nwp_dem <- raster("bow_domain_10km_GEM_Elevation_20031218.tif")
 # model_nwp_dem <- resample(nwp_dem, nwp_zone, method="bilinear")
 #### Calculate the maximum and mean elevation and delta (difference in elevation between the nwp_elevation (if available) and the high resolution dem)
- elev_max1 <- aggregate(domain_dem1, fact = ResFactor, fun = max, na.rm=TRUE)
- elev_max <- disaggregate(elev_max1, fact = ResFactor, fun = max, na.rm=TRUE)
+elev_max1 <- aggregate(domain_dem1, fact = ResFactor, fun = max, na.rm=TRUE)
+elev_max <- disaggregate(elev_max1, fact = ResFactor, fun = max, na.rm=TRUE)
 #  
- elev_mean1 <- aggregate(domain_dem1, fact = ResFactor, fun = mean, na.rm=TRUE)
- elev_mean <- disaggregate(elev_mean1, fact = ResFactor, fun = mean, na.rm=TRUE)
- delta <- (domain_dem1 - resample(elev_mean1, nwp_zone, method="bilinear"))
- delta_elev_max <- ((domain_dem1 - elev_mean) / elev_max)
+elev_mean1 <- aggregate(domain_dem1, fact = ResFactor, fun = mean, na.rm=TRUE)
+elev_mean <- disaggregate(elev_mean1, fact = ResFactor, fun = mean, na.rm=TRUE)
+delta <- (domain_dem1 - resample(elev_mean1, nwp_zone, method="bilinear"))
+delta_elev_max <- ((domain_dem1 - elev_mean) / elev_max)
 #  
 #### delta if the elevation of the nwp model to be used
 # elev_mean <- disaggregate(nwp_dem, fact = ResFactor, fun = mean, na.rm=TRUE)
@@ -243,10 +243,10 @@ YLat <- matrix(0, NumRow, NumCol, byrow = T)
 XLon <- matrix(0, NumRow, NumCol, byrow = T)
 #
 for (i in 1:NumRow) {
-  for (j in 1:NumCol) {
-    XLon[i,j] <- LLXcorner + (XRes/2) + (j-1)*XRes
-    YLat[i,j] <- LLYcorner + (YRes/2) + (i-1)*XRes
-  }
+for (j in 1:NumCol) {
+XLon[i,j] <- LLXcorner + (XRes/2) + (j-1)*XRes
+YLat[i,j] <- LLYcorner + (YRes/2) + (i-1)*XRes
+}
 }
 #
 ## Average side-length of the routing element (using the WATFLOOD square-grid approach).	
@@ -260,23 +260,17 @@ NominalGridSize <- 0.5 * ((Xlength / (NumCol - 1)) + (Ylength / (NumRow - 1)))
 ###################################################################################################################################################
 # Pitremove 
 system("mpiexec -n 12 pitremove -z resample_domain_dem.tif -fel domain_demfel.tif")
-
 # D8 flow directions
 system("mpiexec -n 12 D8Flowdir -p domain_demp.tif -sd8 domain_demsd8.tif -fel domain_demfel.tif") #,show.output.on.console=F,invisible=F)
-
 # Contributing area
 system("mpiexec -n 12 AreaD8 -p domain_demp.tif -ad8 domain_demad8.tif -nc")
-
 # Grid Network 
 system("mpiexec -n 12 Gridnet -p domain_demp.tif -gord domain_demgord.tif -plen domain_demplen.tif -tlen domain_demtlen.tif")
-
-# Threshold
+# Stream by Threshold
 cmd=paste("mpiexec -n 12 Threshold -ssa domain_demad8.tif -src domain_demsrc.tif -thresh ",MinThresh)
 system(cmd)
-
 # Move Outlets to fall in the flow accumulation pixels
 system("mpiexec -n 12 moveoutletstostreams -p domain_demp.tif -src domain_demsrc.tif -o approxoutlets.shp -om outlet.shp")
-
 # maxdist <- ResFactor 
 # cmd=paste("mpiexec -n 12 moveoutletstostreams -p domain_demp.tif -src domain_demsrc.tif -o approxoutlets.shp -om outlet.shp -md",maxdist)
 # system(cmd)
@@ -291,14 +285,11 @@ system("mpiexec -n 12 moveoutletstostreams -p domain_demp.tif -src domain_demsrc
 #
 # Contributing area upstream of outlet
 system("mpiexec -n 12 AreaD8 -p domain_demp.tif -o outlet.shp -ad8 domain_demssa.tif -nc")
-
 # Threshold
 cmd=paste("mpiexec -n 12 Threshold -ssa domain_demssa.tif -src domain_demsrc.tif -thresh ",MinThresh)
 system(cmd)
-
 # # Drop Analysis
 # system("mpiexec -n 8 Dropanalysis -p domain_demp.tif -fel domain_demfel.tif -ad8 domain_demad8.tif -ssa domain_demssa.tif -drp logandrp.txt -o outlet.shp -par 5 500 10 0")
-
 # Stream Reach and Watershed
 system("mpiexec -n 8 Streamnet -fel domain_demfel.tif -p domain_demp.tif -ad8 domain_demad8.tif -src domain_demsrc.tif -o outlet.shp -ord domain_demord.tif -tree domain_demtree.txt -coord domain_demcoord.txt -net domain_demnet.shp -w domain_demw.tif")
 # 
@@ -461,8 +452,8 @@ for (j in 1 : (ResFactor*ResFactor)) {
 yy[i,1] <- (yy[i,1] + as.integer(FdirNumber[fdir1[t(yy[i,])],1]))
 yy[i,2] <- (yy[i,2] + as.integer(FdirNumber[fdir1[t(yy[i,])],2]))
 if (nwp_zone[t(xx[i,])] != nwp_zone[t(yy[i,])]) {
-    break
-} } }
+    break }
+} }
 #
 elevn1[yy] <- filldem1[yy]
 elevn2 <- elevn1 
@@ -563,11 +554,13 @@ if (length(yy) < 1) {
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
+#
 if (length(zz) < 1) {
   break }
 #
 if (length(zz) == 2) {
 zz <- t(zz) }
+#
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
@@ -579,6 +572,7 @@ if (length(yy[,1]) < 1) {
 }
 #
 ## Major River: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
+#
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind = TRUE)
 yy <- xx
 for (i in 1 : 2) {
@@ -588,10 +582,10 @@ for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
     yy <- yy + FdirNumber[zz,]
   }
 if (length(yy) < 1) {
-  break }
+    break }
 #
 next1[xx] <- rank3[yy]
-nwp_zone_next[xx] <- nwp_zone_rank[yy]
+nwp_zone_next[xx] <- nwp_zone_rank[yy]  
 zz <- which(as.matrix(MajorMinorRiv3[yy]) == 1, arr.ind = TRUE)
 #
 if (length(zz[,1]) < 1) {
@@ -606,7 +600,7 @@ xx <- zz
 #
 if (length(yy[,1]) < 1) {
   break }
-###
+#
 }
 ### Correcting flow direction of the outlets based on the grid flow direction values.
 next1[basin_outlet] <- rank3[basin_outlet_next]
@@ -618,28 +612,20 @@ grid_fdir1[!is.na(grid_fdir1)] <- NA
 #
 zz <- which(nwp_zone_next == (nwp_zone_rank + 1), arr.ind = TRUE)
 grid_fdir1[zz] <- 1
-
 zz <- which(nwp_zone_next == (nwp_zone_rank + 1 - NumCol), arr.ind = TRUE)
 grid_fdir1[zz] <- 2
-
 zz <- which(nwp_zone_next == (nwp_zone_rank - NumCol), arr.ind = TRUE)
 grid_fdir1[zz] <- 3
-
 zz <- which(nwp_zone_next == (nwp_zone_rank - NumCol - 1), arr.ind = TRUE)
 grid_fdir1[zz] <- 4
-
 zz <- which(nwp_zone_next == (nwp_zone_rank - 1), arr.ind = TRUE)
 grid_fdir1[zz] <- 5
-
 zz <- which(nwp_zone_next == (nwp_zone_rank + NumCol - 1), arr.ind = TRUE)
 grid_fdir1[zz] <- 6
-
 zz <- which(nwp_zone_next == (nwp_zone_rank + NumCol), arr.ind = TRUE)
 grid_fdir1[zz] <- 7
-
 zz <- which(nwp_zone_next == (nwp_zone_rank + NumCol + 1), arr.ind = TRUE)
 grid_fdir1[zz] <- 8
-
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
 grid_fdir1[zz] <- fdir1[zz]
 #
@@ -759,7 +745,7 @@ LogDA[LogDA == -Inf] <- NaN
 LogDA1 <- as.vector(LogDA)
 RR <- integer(IAKmax - 1)
 for (i in 1:(IAKmax - 1)) {
-  RR[i] = quantile(LogDA1, probs = i/IAKmax, na.rm = TRUE)
+RR[i] = quantile(LogDA1, probs = i/IAKmax, na.rm = TRUE)
 }
 ############# Apply the background field (filtered by NaN to target active grid cells in the domain).
 IAK[!is.nan(LogDA)] <- IAKmax
@@ -828,10 +814,10 @@ channel_slope[channel_slope < Min_Chanel_Slope] <- Min_Chanel_Slope
 ## Reach number for lake, reservoir and/or external routing: user can assign number from 1,2,3...with respect to the number of reservoir / lakes 
 nwp_reach  <- (nwp_grid - nwp_grid)
 if (InsertedReservoir == "Reservoir") {
-  rescelnum <- extract(nwp_reach, reservoirlocation, cellnumbers=T)
-  for (i in 1:length(rescelnum)) { 
-    nwp_reach[rescelnum[i]] <- i
-  }
+rescelnum <- extract(nwp_reach, reservoirlocation, cellnumbers=T)
+for (i in 1:length(rescelnum)) { 
+nwp_reach[rescelnum[i]] <- i
+}
 }
 #
 Reach <- as.matrix(nwp_reach)
@@ -865,10 +851,10 @@ drainagedata <- rbind((apply(grid_rank, 2, rev)), (apply(grid_next, 2, rev)), (a
                       (apply(channel_slope, 2, rev)), (apply(Elevn, 2, rev)), (apply(channel_length, 2, rev)), (apply(IAK, 2, rev)),
                       (apply(IntSlope, 2, rev)), (apply(Chnl, 2, rev)), (apply(Reach, 2, rev)), (apply(GridArea, 2, rev)))
 #
-rm(list=setdiff(ls(), c("nwp_zone", "drainagedata", "facc_at_outlet1", "land_cover", "domain_dem1", "drain_net", "CLAYSANDSOM", "GlacierInLandCover",
-                        "MESHVersion", "NominalGrid_Area", "SpatialFilter", "Minimum_GRU_Fraction", "Minimum_Glacier_Fraction", "UpdateIrrigation", "domain_irrRes",
-                        "NumRow", "NumCol", "ResFactor" ,"GRUsClass", "AspectClass", "SlopeClass", "Min_Chanel_Slope","BasinName", "NominalGridSize",
-                        "LLXcorner", "LLYcorner", "XRes", "YRes", "grid_rank", "grid_next", "IAKmax", "NumbSoilData", "delta", "delta_elev_max", "elev_band")))
+# rm(list=setdiff(ls(), c("nwp_zone", "drainagedata", "facc_at_outlet1", "land_cover", "domain_dem1", "drain_net", "CLAYSANDSOM", "GlacierInLandCover", "start_time",
+#                         "MESHVersion", "NominalGrid_Area", "SpatialFilter", "Minimum_GRU_Fraction", "Minimum_Glacier_Fraction", "UpdateIrrigation", "domain_irrRes",
+#                         "NumRow", "NumCol", "ResFactor" ,"GRUsClass", "AspectClass", "SlopeClass", "Min_Chanel_Slope","BasinName", "NominalGridSize",
+#                         "LLXcorner", "LLYcorner", "XRes", "YRes", "grid_rank", "grid_next", "IAKmax", "NumbSoilData", "delta", "delta_elev_max", "elev_band")))
 ###################################################################################################################################################################
 ###################################################################################################################################################################
 #### Masking the land cover by the river basin ######################
@@ -876,63 +862,56 @@ basin_landcover <- mask(land_cover, facc_at_outlet1)
 ##### Calculate Slope 
 slope <- terrain(domain_dem1, opt = "slope", unit='degrees')
 # slope <- terrain(domain_dem1, opt = "slope", unit='degrees', neighbors=8)
+# writeRaster(slope, "R_Slope.tif", datatype="FLT4S", overwrite=TRUE)
 basin_slope <- mask(slope, facc_at_outlet1)
 #
 if (MESHVersion == "Original") {
-  grus1 <- basin_landcover }
+grus1 <- basin_landcover }
 #
 if (MESHVersion == "Mountain") {
-  #
-  ## Calculate aspect
-  aspect <- focal(terrain(domain_dem1, opt = "aspect", unit='degrees'), SpatialFilter)
-  # aspect <- focal(terrain(domain_dem1, opt = "aspect", unit='degrees', neighbors=8, flatAspect = NA), SpatialFilter)
-  ## Mask the aspect by basin
-  basin_aspect <- mask(aspect, facc_at_outlet1)
-  #
-  #  writeRaster(slope, "R_Slope.tif", datatype="FLT4S", overwrite=TRUE)
-  #  writeRaster(aspect, "R_Aspect.tif", datatype="FLT4S", overwrite=TRUE)
-  #
-  ###### GRUs Creation and model discretization by Combining land cover, slope and aspect################################################## 
-  ##### for mountain MESH version and land cover only for Original MESH version
-  ######################### Reclassifying slope and aspect ################################################################################
-  
-  basin_landcover <- land_cover
-  basin_slope <- slope
-  basin_aspect <- aspect
-  
-  basin_slopeclass <- reclassify(basin_slope, SlopeClass)
-  basin_aspectclass <- reclassify(basin_aspect, AspectClass)
-  # writeRaster(basin_aspectclass, "NR_basin_aspectclass.tif", datatype="FLT4S", overwrite=TRUE)
-  #
-  ### Model discretization and GRUs creation: Combine the land cover, slope and aspect ####################################################
-  grus1 <- basin_landcover
-  #
-  for (i in 1 : maxValue(basin_landcover)) {
-    ### GRUs discretization when there are two slope aspect classes #########
-    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3*i-2
-    grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 3*i-1
-    grus1[basin_landcover == i & basin_slopeclass != 2] <- 3*i
-    #
-    # ### GRUs discretization when there are four slope aspect classes #########
-    # grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 4*i-3 #1
-    # grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 4*i-2 #2
-    # grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 3] <- 4*i-1 #3
-    # grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 4] <- 4*i   #4
-    # grus1[basin_landcover == i & basin_slopeclass != 2] <- 4*i                            #4
-    #
-    # #### GRUs discretization when there are two slope aspect classes and two elevation bands #########
-    # grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass == 2 & basin_aspectclass != 2] <- 5*i-4
-    # grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass == 2 & basin_aspectclass != 1] <- 5*i-3
-    # grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass != 2] <- 5*i
-    # grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass == 2 & basin_aspectclass != 2] <- 5*i-2
-    # grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass == 2 & basin_aspectclass != 1] <- 5*i-1
-    # grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass != 2] <- 5*i
-    #
-  }
-  #
-  grus <- reclassify(grus1, GRUsClass)
-  grus1 <- grus
-  #
+#
+## Calculate aspect
+aspect <- focal(terrain(domain_dem1, opt = "aspect", unit='degrees'), SpatialFilter)
+# aspect <- focal(terrain(domain_dem1, opt = "aspect", unit='degrees', neighbors=8, flatAspect = NA), SpatialFilter)
+# writeRaster(aspect, "R_Aspect.tif", datatype="FLT4S", overwrite=TRUE)
+## Mask the aspect by basin
+basin_aspect <- mask(aspect, facc_at_outlet1)
+#
+###### GRUs Creation and model discretization by Combining land cover, slope and aspect################################################## 
+##### for mountain MESH version and land cover only for Original MESH version
+######################### Reclassifying slope and aspect ################################################################################
+basin_slopeclass <- reclassify(basin_slope, SlopeClass)
+basin_aspectclass <- reclassify(basin_aspect, AspectClass)
+# writeRaster(basin_aspectclass, "NR_basin_aspectclass.tif", datatype="FLT4S", overwrite=TRUE)
+### Model discretization and GRUs creation: Combine the land cover, slope and aspect ####################################################
+grus1 <- basin_landcover
+#
+for (i in 1 : maxValue(basin_landcover)) {
+### GRUs discretization when there are two slope aspect classes #########
+grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 3*i-2
+grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 3*i-1
+grus1[basin_landcover == i & basin_slopeclass != 2] <- 3*i
+#
+# ### GRUs discretization when there are four slope aspect classes #########
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 2] <- 4*i-3 #1
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 1] <- 4*i-2 #2
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 3] <- 4*i-1 #3
+# grus1[basin_landcover == i & basin_slopeclass == 2 & basin_aspectclass == 4] <- 4*i   #4
+# grus1[basin_landcover == i & basin_slopeclass != 2] <- 4*i                            #4
+#
+# #### GRUs discretization when there are two slope aspect classes and two elevation bands #########
+# grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass == 2 & basin_aspectclass != 2] <- 5*i-4
+# grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass == 2 & basin_aspectclass != 1] <- 5*i-3
+# grus1[basin_landcover == i & elev_band == 2 & basin_slopeclass != 2] <- 5*i
+# grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass == 2 & basin_aspectclass != 2] <- 5*i-2
+# grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass == 2 & basin_aspectclass != 1] <- 5*i-1
+# grus1[basin_landcover == i & elev_band == 1 & basin_slopeclass != 2] <- 5*i
+#
+}
+#
+grus <- reclassify(grus1, GRUsClass)
+grus1 <- grus
+#
 }
 # writeRaster(grus1, "M_GRUs_Produced.tif", datatype="INT2S", overwrite=TRUE)
 #
@@ -944,11 +923,11 @@ TotalGrid <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=T
 GRUGrid_Frac <- matrix(nrow = NumRow*NumCol, ncol = maxValue(grus1))
 #
 for (i in 1 : maxValue(grus1)) {
-  grus_mask <- grus1
-  grus_mask[grus_mask != i] <- NA
-  grus_mask[grus_mask == i] <- 1
-  GRU_Frac <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
-  GRUGrid_Frac[,i] <- (GRU_Frac/TotalGrid)
+grus_mask <- grus1
+grus_mask[grus_mask != i] <- NA
+grus_mask[grus_mask == i] <- 1
+GRU_Frac <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
+GRUGrid_Frac[,i] <- (GRU_Frac/TotalGrid)
 }
 GRUGrid_Frac[is.na(GRUGrid_Frac)] <- 0
 ####################################################################################################
@@ -958,21 +937,21 @@ res(PolishedGRUs) <- res(grus1)
 crs(PolishedGRUs) <- crs(grus1)
 #
 for (i in 1:maxValue(grus1)) {
-  grusmask <- grus1
-  grusmask[grusmask != i] <- NA
-  xxGRU_Frac <- GRUGrid_Frac[,i]
-  if (is.element(i, GlacierInLandCover)) {
-    xxGRU_Frac[xxGRU_Frac < Minimum_Glacier_Fraction] <- 0
-    GLGRU_Frac <- xxGRU_Frac
-  } else {
-    xxGRU_Frac[xxGRU_Frac < Minimum_GRU_Fraction] <- 0
-  }
-  xxGRU_Frac[xxGRU_Frac != 0] <- i
-  yy <- disaggregate(raster(matrix(xxGRU_Frac, nrow = NumRow, ncol = NumCol, byrow = T)), fact = ResFactor, fun = mean, na.rm=TRUE)
-  extent(yy) <- extent(grus1)
-  res(yy) <- res(grus1)
-  crs(yy) <- crs(grus1)
-  PolishedGRUs <- PolishedGRUs + mask(yy, grusmask, inverse=FALSE, updatevalue=0)
+grusmask <- grus1
+grusmask[grusmask != i] <- NA
+xxGRU_Frac <- GRUGrid_Frac[,i]
+if (is.element(i, GlacierInLandCover)) {
+xxGRU_Frac[xxGRU_Frac < Minimum_Glacier_Fraction] <- 0
+GLGRU_Frac <- xxGRU_Frac
+} else {
+xxGRU_Frac[xxGRU_Frac < Minimum_GRU_Fraction] <- 0
+}
+xxGRU_Frac[xxGRU_Frac != 0] <- i
+yy <- disaggregate(raster(matrix(xxGRU_Frac, nrow = NumRow, ncol = NumCol, byrow = T)), fact = ResFactor, fun = mean, na.rm=TRUE)
+extent(yy) <- extent(grus1)
+res(yy) <- res(grus1)
+crs(yy) <- crs(grus1)
+PolishedGRUs <- PolishedGRUs + mask(yy, grusmask, inverse=FALSE, updatevalue=0)
 }
 #
 PolishedGRUs[PolishedGRUs == 0] <- NA
@@ -985,64 +964,63 @@ grus2 <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)
 grus3 <- matrix(nrow = NumRow*NumCol, ncol = (1 + maxValue(grus1)))
 #
 for (i in 1 : maxValue(grus1)) {
-  grus_mask <- PolishedGRUs
-  grus_mask[grus_mask != i] <- NA
-  grus_mask[grus_mask == i] <- 1
-  grus3[,i] <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)) / grus2
+grus_mask <- PolishedGRUs
+grus_mask[grus_mask != i] <- NA
+grus_mask[grus_mask == i] <- 1
+grus3[,i] <- as.vector(aggregate(grus_mask, fact = ResFactor, fun = sum, na.rm=TRUE)) / grus2
 }
 #
 grus3[is.na(grus3)] <- 0
 #
 #######################################################################################################
 # for (i in 1 : maxValue(grus1)) {
-#   if (is.element(i, GlacierInLandCover)) {
-#     grus3[,i] <- 0
-#   }
+# if (is.element(i, GlacierInLandCover)) {
+# grus3[,i] <- 0
+# }
 # }
 # #
 # grus4 <- (grus3 * (1 - GLGRU_Frac) / rowSums(grus3, na.rm = TRUE, dims = 1))
 # grus3 <- grus4
 # #
 # for (i in 1 : maxValue(grus1)) {
-#   if (is.element(i, GlacierInLandCover)) {
-#     grus3[,i] <- GLGRU_Frac
-#   }
+# if (is.element(i, GlacierInLandCover)) {
+# grus3[,i] <- GLGRU_Frac
+# }
 # }
 # #
 # grus3[is.na(grus3)] <- 0
 ##########################################################################################################
 #### Updating the irrigation fraction of the modeling grid ###############################################
 if (UpdateIrrigation == "Irrigation") {
-  Irrig_mask <-  mask(domain_irrRes, facc_at_outlet1)
-  IrrigFracSum <- as.vector(aggregate(Irrig_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
-  Irrig_mask[Irrig_mask != 1] <- 1
-  IrrigTotal <- as.vector(aggregate(Irrig_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
-  IrrigFract <- (IrrigFracSum/IrrigTotal)
-  IrrigFract[is.na(IrrigFract)] <- 0
-  #  
-  grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
-  #
-  for (i in 1 : (1 + maxValue(grus1))) {
+Irrig_mask <-  mask(domain_irrRes, facc_at_outlet1)
+IrrigFracSum <- as.vector(aggregate(Irrig_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
+Irrig_mask[Irrig_mask != 1] <- 1
+IrrigTotal <- as.vector(aggregate(Irrig_mask, fact = ResFactor, fun = sum, na.rm=TRUE))
+IrrigFract <- (IrrigFracSum/IrrigTotal)
+IrrigFract[is.na(IrrigFract)] <- 0
+#  
+grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
+#
+for (i in 1 : (1 + maxValue(grus1))) {
     
-    if (is.element(i, CropInLandCover)) {
-      cropgrus <- ((1 - IrrigFract)*(grus3[,i] + grus3[,i + 1]))
-      grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(cropgrus, NumRow, NumCol, byrow = T)), 2, rev)
-    } 
-    else if (is.element(i, IrrigInLandCover)) {
-      Irriggrus <- (IrrigFract*(grus3[,i] + grus3[,i - 1]))
-      grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(Irriggrus, NumRow, NumCol, byrow = T)), 2, rev)
-      
-    } else {    
-      grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(grus3[,i], NumRow, NumCol, byrow = T)), 2, rev)
-    }
-  }
+if (is.element(i, CropInLandCover)) {
+cropgrus <- ((1 - IrrigFract)*(grus3[,i] + grus3[,i + 1]))
+grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(cropgrus, NumRow, NumCol, byrow = T)), 2, rev)
+} 
+else if (is.element(i, IrrigInLandCover)) {
+Irriggrus <- (IrrigFract*(grus3[,i] + grus3[,i - 1]))
+grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(Irriggrus, NumRow, NumCol, byrow = T)), 2, rev)
+} else {    
+grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(grus3[,i], NumRow, NumCol, byrow = T)), 2, rev)
+}
+}
 } else {
-  ############################################################################################################################
-  grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
-  #
-  for (i in 1 : (1 + maxValue(grus1))) {
-    grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(grus3[,i], NumRow, NumCol, byrow = T)), 2, rev)
-  }
+############################################################################################################################
+grus_frac_r2c <- matrix(nrow = NumRow*(1 + maxValue(grus1)), ncol = NumCol)
+#
+for (i in 1 : (1 + maxValue(grus1))) {
+grus_frac_r2c[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply((matrix(grus3[,i], NumRow, NumCol, byrow = T)), 2, rev)
+}
 }
 grus_frac_r2c[is.na(grus_frac_r2c)] <- 0
 ##
@@ -1154,10 +1132,10 @@ writeLines(header1, con = con, sep = eol)
 close(con)
 
 for (row in 1:nrow(dranage_database)) {
-  dranage_database1 <- formatC(dranage_database[row, ],
+dranage_database1 <- formatC(dranage_database[row, ],
                                digits = 6, width = 1,
                                format = "f")
-  cat(dranage_database1, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_drainage_database.r2c"), append = TRUE)
+cat(dranage_database1, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_drainage_database.r2c"), append = TRUE)
 }
 ###################################################################################################################################
 #######################################################################################################
@@ -1168,7 +1146,7 @@ ClaySandSomMasked <- as.array(aggregate(mask(CLAYSANDSOM, facc_at_outlet1), fact
 ClaySandSomData <- apply(ClaySandSomMasked, c(2,3), rev)
 soildatabase <- matrix(nrow = NumRow*dim(ClaySandSomData)[3], ncol = NumCol)
 for (i in 1 : dim(ClaySandSomData)[3]) {
-  soildatabase[(NumRow*i-(NumRow-1)):(NumRow*i),] <- ClaySandSomData[,,i]
+soildatabase[(NumRow*i-(NumRow-1)):(NumRow*i),] <- ClaySandSomData[,,i]
 }
 soildatabase[is.na(soildatabase)] <- 0
 Number_Soil_Layers <- as.integer(dim(ClaySandSomData)[3]/NumbSoilData)
@@ -1189,81 +1167,81 @@ drainge_dens <- apply(as.matrix(drainge_dens1), 2, rev)
 ############################################################################################################
 #
 if (MESHVersion == "Mountain") {
-  #### Calculate Mountain MESH model parameters
-  ##### Weight for grid curvature that will be used to calculate wind speed correction parameters
-  weight1 = matrix(c(0,1,0,1,0,1,0,1,0), nrow=3)
-  weight2 = matrix(c(1,0,1,0,0,0,1,0,1), nrow=3)
-  curve1 <- 0.5*focal(domain_dem1, w=weight1,fun=sum, na.rm=FALSE)
-  curve2 <- 0.5*focal(domain_dem1, w=weight1,fun=sum, na.rm=FALSE) 
-  dem_cell_area <- area(domain_dem1, na.rm=TRUE, weights=FALSE)
-  dem_cell_area <- dem_cell_area[!is.na(dem_cell_area)]
-  dem_cell_length <- 1000*sqrt(median(dem_cell_area))
-  dem_cell_length <- min(dem_cell_length[!is.na(dem_cell_length)],300)
-  curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * domain_dem1) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
-  curve_Max <- 2.0 * disaggregate(aggregate(abs(curve), fact = ResFactor, fun = max, na.rm=TRUE), fact = ResFactor, fun = max, na.rm=TRUE)
-  #
-  basin_elevn <- mask(domain_dem1, PolishedGRUs)
-  basin_delta <- mask(delta, PolishedGRUs)
-  basin_delta_elev_max <- mask(delta_elev_max, PolishedGRUs)
-  basin_slope0 <- mask(slope, PolishedGRUs)
-  basin_aspect0 <- mask(aspect, PolishedGRUs)
-  #  basin_curve <- mask(curve, PolishedGRUs)
-  basin_curve <- mask((curve/curve_Max), PolishedGRUs)
-  #
-  ###### Calculate the Sine and cosine of aspect expressed in radian for the calculation of the zonal GRUs mean aspect
-  basin_sinaspect <- sin(basin_aspect0*pi/180)
-  basin_cosaspect <- cos(basin_aspect0*pi/180)
-  #
-  ###### Calculate the weighted average values of elevation, slope, aspect, delta and curvature for MESH_Parameters.r2c file
-  basin_elevn1  <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  basin_delta1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  basin_delta_elev_max1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  basin_slope1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  basin_aspect1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  basin_curve1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
-  #
-  for (i in 1 : maxValue(grus1)) {
-    grus_mask <- PolishedGRUs
-    grus_mask[grus_mask != i] <- NA
-    #
-    basin_elevn2 <- mask(basin_elevn, grus_mask)
-    basin_delta2 <- mask(basin_delta, grus_mask)
-    basin_delta_elev_max2 <- mask(basin_delta_elev_max, grus_mask)
-    basin_slope2 <- mask(basin_slope, grus_mask)
-    basin_sinaspect2 <- mask(basin_sinaspect, grus_mask)
-    basin_cosaspect2 <- mask(basin_cosaspect, grus_mask)
-    basin_curve2 <- mask(basin_curve, grus_mask)
-    #
-    basin_elevn3 <- as.matrix(aggregate(basin_elevn2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    basin_slope3 <- as.matrix(aggregate(basin_slope2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    basin_delta3 <- as.matrix(aggregate(basin_delta2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    basin_delta3 <- as.matrix(aggregate(basin_delta2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    basin_delta_elev_max3 <- as.matrix(aggregate(basin_delta_elev_max2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    basin_sinaspect3 <- as.matrix(aggregate(basin_sinaspect2, fact = ResFactor, fun = sum, na.rm=TRUE))
-    basin_cosaspect3 <- as.matrix(aggregate(basin_cosaspect2, fact = ResFactor, fun = sum, na.rm=TRUE))
-    basin_aspect2 <- ((360 + (atan2(basin_sinaspect3,basin_cosaspect3))*(180/pi)) %% 360)
-    basin_curve3 <- as.matrix(aggregate(basin_curve2, fact = ResFactor, fun = mean, na.rm=TRUE))
-    #
-    basin_elevn1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_elevn3, 2, rev)
-    basin_delta1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_delta3, 2, rev)
-    basin_delta_elev_max1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_delta_elev_max3, 2, rev)
-    basin_slope1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_slope3, 2, rev)
-    basin_aspect1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_aspect2, 2, rev)
-    basin_curve1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_curve3, 2, rev)
-  }  
-  #
-  elevnslopeaspectdeltacurve <- rbind(basin_elevn1,basin_slope1,basin_aspect1,basin_delta1,basin_delta_elev_max1,basin_curve1)
-  elevnslopeaspectdeltacurve[is.na(elevnslopeaspectdeltacurve)] <- 0
-  #
-  ######### Combine soil, elevation, slope, aspect, delta, delta_elev_max, curve and drainage density for MESH_parameters file
-  soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,elevnslopeaspectdeltacurve,drainge_dens)
+#### Calculate Mountain MESH model parameters
+##### Weight for grid curvature that will be used to calculate wind speed correction parameters
+weight1 = matrix(c(0,1,0,1,0,1,0,1,0), nrow=3)
+weight2 = matrix(c(1,0,1,0,0,0,1,0,1), nrow=3)
+curve1 <- 0.5*focal(domain_dem1, w=weight1,fun=sum, na.rm=FALSE)
+curve2 <- 0.5*focal(domain_dem1, w=weight1,fun=sum, na.rm=FALSE) 
+dem_cell_area <- area(domain_dem1, na.rm=TRUE, weights=FALSE)
+dem_cell_area <- dem_cell_area[!is.na(dem_cell_area)]
+dem_cell_length <- 1000*sqrt(median(dem_cell_area))
+dem_cell_length <- min(dem_cell_length[!is.na(dem_cell_length)],300)
+curve <- 0.25 * (((2.0 * sqrt(2.0) + 2) * domain_dem1) - (sqrt(2.0)*curve1) - (curve2)) / (2.0 * sqrt(2.0) * dem_cell_length)
+curve_Max <- 2.0 * disaggregate(aggregate(abs(curve), fact = ResFactor, fun = max, na.rm=TRUE), fact = ResFactor, fun = max, na.rm=TRUE)
+#
+basin_elevn <- mask(domain_dem1, PolishedGRUs)
+basin_delta <- mask(delta, PolishedGRUs)
+basin_delta_elev_max <- mask(delta_elev_max, PolishedGRUs)
+basin_slope0 <- mask(slope, PolishedGRUs)
+basin_aspect0 <- mask(aspect, PolishedGRUs)
+#  basin_curve <- mask(curve, PolishedGRUs)
+basin_curve <- mask((curve/curve_Max), PolishedGRUs)
+#
+###### Calculate the Sine and cosine of aspect expressed in radian for the calculation of the zonal GRUs mean aspect
+basin_sinaspect <- sin(basin_aspect0*pi/180)
+basin_cosaspect <- cos(basin_aspect0*pi/180)
+#
+###### Calculate the weighted average values of elevation, slope, aspect, delta and curvature for MESH_Parameters.r2c file
+basin_elevn1  <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+basin_delta1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+basin_delta_elev_max1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+basin_slope1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+basin_aspect1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+basin_curve1 <- matrix(nrow = NumRow*maxValue(grus1), ncol = NumCol)
+#
+for (i in 1 : maxValue(grus1)) {
+grus_mask <- PolishedGRUs
+grus_mask[grus_mask != i] <- NA
+#
+basin_elevn2 <- mask(basin_elevn, grus_mask)
+basin_delta2 <- mask(basin_delta, grus_mask)
+basin_delta_elev_max2 <- mask(basin_delta_elev_max, grus_mask)
+basin_slope2 <- mask(basin_slope, grus_mask)
+basin_sinaspect2 <- mask(basin_sinaspect, grus_mask)
+basin_cosaspect2 <- mask(basin_cosaspect, grus_mask)
+basin_curve2 <- mask(basin_curve, grus_mask)
+#
+basin_elevn3 <- as.matrix(aggregate(basin_elevn2, fact = ResFactor, fun = mean, na.rm=TRUE))
+basin_slope3 <- as.matrix(aggregate(basin_slope2, fact = ResFactor, fun = mean, na.rm=TRUE))
+basin_delta3 <- as.matrix(aggregate(basin_delta2, fact = ResFactor, fun = mean, na.rm=TRUE))
+basin_delta3 <- as.matrix(aggregate(basin_delta2, fact = ResFactor, fun = mean, na.rm=TRUE))
+basin_delta_elev_max3 <- as.matrix(aggregate(basin_delta_elev_max2, fact = ResFactor, fun = mean, na.rm=TRUE))
+basin_sinaspect3 <- as.matrix(aggregate(basin_sinaspect2, fact = ResFactor, fun = sum, na.rm=TRUE))
+basin_cosaspect3 <- as.matrix(aggregate(basin_cosaspect2, fact = ResFactor, fun = sum, na.rm=TRUE))
+basin_aspect2 <- ((360 + (atan2(basin_sinaspect3,basin_cosaspect3))*(180/pi)) %% 360)
+basin_curve3 <- as.matrix(aggregate(basin_curve2, fact = ResFactor, fun = mean, na.rm=TRUE))
+#
+basin_elevn1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_elevn3, 2, rev)
+basin_delta1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_delta3, 2, rev)
+basin_delta_elev_max1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_delta_elev_max3, 2, rev)
+basin_slope1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_slope3, 2, rev)
+basin_aspect1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_aspect2, 2, rev)
+basin_curve1[(NumRow*i-(NumRow-1)):(NumRow*i),] <- apply(basin_curve3, 2, rev)
+}  
+#
+elevnslopeaspectdeltacurve <- rbind(basin_elevn1,basin_slope1,basin_aspect1,basin_delta1,basin_delta_elev_max1,basin_curve1)
+elevnslopeaspectdeltacurve[is.na(elevnslopeaspectdeltacurve)] <- 0
+#
+######### Combine soil, elevation, slope, aspect, delta, delta_elev_max, curve and drainage density for MESH_parameters file
+soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,elevnslopeaspectdeltacurve,drainge_dens)
 } else {
-  ######## Combine Soil, slope and drainage density for MESH_parameters file
-  gridslope0 <- as.matrix(aggregate(tan(basin_slope*pi/180), fact = ResFactor, fun = mean, na.rm=TRUE))
-  gridslope <- apply(gridslope0, 2, rev)
-  gridslope[is.na(gridslope)] <- 0
-  soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,gridslope,drainge_dens)
-  #
+######## Combine Soil, slope and drainage density for MESH_parameters file
+gridslope0 <- as.matrix(aggregate(tan(basin_slope*pi/180), fact = ResFactor, fun = mean, na.rm=TRUE))
+gridslope <- apply(gridslope0, 2, rev)
+gridslope[is.na(gridslope)] <- 0
+soilelevnslopeaspectdeltacurvedraindens <- rbind(soildatabase,gridslope,drainge_dens)
+#
 }
 ############# Write header for the MESH parameter r2c file ###
 header1 <- "#########################################################################"
@@ -1286,144 +1264,145 @@ header1 <- c(header1, Ellipsoid_value, "#")
 header1 <- c(header1, xorigin_value, yorigin_value, "#")
 ##
 if (MESHVersion == "Mountain") {
-  #  
-  for (i in 1 : Number_Soil_Layers) {
-    j <- i 
-    attributename <- paste(":AttributeName ", j, " Clay	", i, "")
-    header1 <- c(header1, attributename)
-    attributeunits <- paste(":AttributeUnits ", j, " % ")
-    header1 <- c(header1, attributeunits)
-    
-  }
-  #
-  for (i in 1 : Number_Soil_Layers) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " Sand	", i, "")
-    header1 <- c(header1, attributename)
-    attributeunits <- paste(":AttributeUnits ", j, " % ")
-    header1 <- c(header1, attributeunits)
-  }
-  #
-  if (NumbSoilData > 2) {
-    for (i in 1 : Number_Soil_Layers) {
-      j <- j + 1
-      attributename <- paste(":AttributeName ", j, " orgm	", i, "")
-      header1 <- c(header1, attributename)
-      attributeunits <- paste(":AttributeUnits ", j, " % ")
-      header1 <- c(header1, attributeunits)
-    }
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " elevation	", i, "")
-    header1 <- c(header1, attributename)
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " slope	", i, "") 
-    header1 <- c(header1, attributename)
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " aspect	", i, "")
-    header1 <- c(header1, attributename)
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " delta	", i, "") 
-    header1 <- c(header1, attributename)
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " delta_elevmax	", i, "") 
-    header1 <- c(header1, attributename)
-  }
-  #
-  for (i in 1:maxValue(grus1)) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " curvature	", i, "") 
-    header1 <- c(header1, attributename)
-  }
-  #
-  j <- j + 1
-  attributename <- paste(":AttributeName ", j, " dd	")
-  header1 <- c(header1, attributename)
-  attributeunits <- paste(":AttributeUnits ", j, " km km-2 ")
-  header1 <- c(header1, attributeunits)
-  #
-  header1 <- c(header1, "#", xcount_value, ycount_value, xdelta_value, ydelta_value, "#")
-  header1 <- c(header1, ":EndHeader")
-  
-  eol <- "\n"
-  con <- file(paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), open = "w")
-  writeLines(header1, con = con, sep = eol)
-  close(con)
-  #  
-  for (row in 1:nrow(soilelevnslopeaspectdeltacurvedraindens)) {
-    meshparams <- formatC(soilelevnslopeaspectdeltacurvedraindens[row, ],
+#  
+for (i in 1 : Number_Soil_Layers) {
+j <- i 
+attributename <- paste(":AttributeName ", j, " Clay	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+#
+for (i in 1 : Number_Soil_Layers) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " Sand	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+#
+if (NumbSoilData > 2) {
+for (i in 1 : Number_Soil_Layers) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " orgm	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " elevation	", i, "")
+header1 <- c(header1, attributename)
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " slope	", i, "") 
+header1 <- c(header1, attributename)
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " aspect	", i, "")
+header1 <- c(header1, attributename)
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " delta	", i, "") 
+header1 <- c(header1, attributename)
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " delta_elevmax	", i, "") 
+header1 <- c(header1, attributename)
+}
+#
+for (i in 1:maxValue(grus1)) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " curvature	", i, "") 
+header1 <- c(header1, attributename)
+}
+#
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " dd	")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " km km-2 ")
+header1 <- c(header1, attributeunits)
+#
+header1 <- c(header1, "#", xcount_value, ycount_value, xdelta_value, ydelta_value, "#")
+header1 <- c(header1, ":EndHeader")
+#  
+eol <- "\n"
+con <- file(paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), open = "w")
+writeLines(header1, con = con, sep = eol)
+close(con)
+#  
+for (row in 1:nrow(soilelevnslopeaspectdeltacurvedraindens)) {
+meshparams <- formatC(soilelevnslopeaspectdeltacurvedraindens[row, ],
                           digits = 6, width = 1,
                           format = "f")
-    cat(meshparams, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), append = TRUE)
-  }
+cat(meshparams, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), append = TRUE)
+}
 } else {
-  #
-  for (i in 1 : Number_Soil_Layers) {
-    j <- i
-    attributename <- paste(":AttributeName ", j, " Clay	", i, "")
-    header1 <- c(header1, attributename)
-    attributeunits <- paste(":AttributeUnits ", j, " % ")
-    header1 <- c(header1, attributeunits)
-  }
-  #
-  for (i in 1 : Number_Soil_Layers) {
-    j <- j + 1
-    attributename <- paste(":AttributeName ", j, " Sand	", i, "")
-    header1 <- c(header1, attributename)
-    attributeunits <- paste(":AttributeUnits ", j, " % ")
-    header1 <- c(header1, attributeunits)
-  }
-  #
-  if (NumbSoilData > 2) {
-    for (i in 1 : Number_Soil_Layers) {
-      j <- j + 1
-      attributename <- paste(":AttributeName ", j, " orgm	", i, "")
-      header1 <- c(header1, attributename)
-      attributeunits <- paste(":AttributeUnits ", j, " % ")
-      header1 <- c(header1, attributeunits)
-    }
-  }
-  #
-  j <- j + 1
-  attributename <- paste(":AttributeName ", j, " xslp	")
-  header1 <- c(header1, attributename)
-  attributeunits <- paste(":AttributeUnits ", j, " m/m ")
-  header1 <- c(header1, attributeunits)
-  #
-  j <- j + 1
-  attributename <- paste(":AttributeName ", j, " dd	")
-  header1 <- c(header1, attributename)
-  attributeunits <- paste(":AttributeUnits ", j, " km km-2 ")
-  header1 <- c(header1, attributeunits)
-  #
-  header1 <- c(header1, "#", xcount_value, ycount_value, xdelta_value, ydelta_value, "#")
-  header1 <- c(header1, ":EndHeader")
-  
-  eol <- "\n"
-  con <- file(paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), open = "w")
-  writeLines(header1, con = con, sep = eol)
-  close(con)
-  
-  for (row in 1:nrow(soilelevnslopeaspectdeltacurvedraindens)) {
-    meshparams <- formatC(soilelevnslopeaspectdeltacurvedraindens[row, ],
+#
+for (i in 1 : Number_Soil_Layers) {
+j <- i
+attributename <- paste(":AttributeName ", j, " Clay	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+#
+for (i in 1 : Number_Soil_Layers) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " Sand	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+#
+if (NumbSoilData > 2) {
+for (i in 1 : Number_Soil_Layers) {
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " orgm	", i, "")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " % ")
+header1 <- c(header1, attributeunits)
+}
+}
+#
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " xslp	")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " m/m ")
+header1 <- c(header1, attributeunits)
+#
+j <- j + 1
+attributename <- paste(":AttributeName ", j, " dd	")
+header1 <- c(header1, attributename)
+attributeunits <- paste(":AttributeUnits ", j, " km km-2 ")
+header1 <- c(header1, attributeunits)
+#
+header1 <- c(header1, "#", xcount_value, ycount_value, xdelta_value, ydelta_value, "#")
+header1 <- c(header1, ":EndHeader")
+#
+eol <- "\n"
+con <- file(paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), open = "w")
+writeLines(header1, con = con, sep = eol)
+close(con)
+#  
+for (row in 1:nrow(soilelevnslopeaspectdeltacurvedraindens)) {
+meshparams <- formatC(soilelevnslopeaspectdeltacurvedraindens[row, ],
                           digits = 6, width = 1,
                           format = "f")
-    cat(meshparams, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), append = TRUE)
-  }
+cat(meshparams, "\n", sep = "  ", file = paste0(BasinName,MESHVersion,"_MESH_parameters.r2c"), append = TRUE)
+}
 }
 ###########################################################################################################################
 ###########################################################################################################################
+end_time <- Sys.time()
+end_time - start_time
