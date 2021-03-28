@@ -557,17 +557,17 @@ for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
 zz <- fdir1[yy]
 yy <- yy + FdirNumber[zz,]
 }
+if (length(yy) < 1) {
+  break }
 #
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
-#
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
 if (length(zz) < 1) {
   break }
 #
 if (length(zz) == 2) {
 zz <- t(zz) }
-#
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
@@ -579,7 +579,6 @@ if (length(yy[,1]) < 1) {
 }
 #
 ## Major River: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
-#
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind = TRUE)
 yy <- xx
 for (i in 1 : 2) {
@@ -588,23 +587,24 @@ for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
     zz <- fdir1[yy]
     yy <- yy + FdirNumber[zz,]
   }
+if (length(yy) < 1) {
+  break }
 #
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
-#
 zz <- which(as.matrix(MajorMinorRiv3[yy]) == 1, arr.ind = TRUE)
 #
 if (length(zz[,1]) < 1) {
   break }
 #
 if (length(zz) == 2) {
-  zz <- t(zz) }
+zz <- t(zz) }
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
 xx <- zz
 #
-if (length(xx[,1]) < 1) {
+if (length(yy[,1]) < 1) {
   break }
 ###
 }
