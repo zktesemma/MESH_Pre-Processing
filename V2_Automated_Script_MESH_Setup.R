@@ -525,9 +525,20 @@ fdir6 <- (as.matrix(fdir1)*nwp_zone_edge_mask)
 xx <- which(fdir6 > 0, arr.ind=TRUE)
 yy <- fdir1[xx]
 zz <- xx  + FdirNumber[yy,]
-for (i in 1 : length(xx[,1])) {
-if (nwp_zone[t(xx[i,])] == nwp_zone[t(zz[i,])]) {
-fdir6[t(xx[i,])] <- NA }
+#
+# for (i in 1 : length(xx[,1])) {
+# if (nwp_zone[t(xx[i,])] == nwp_zone[t(zz[i,])]) {
+# fdir6[t(xx[i,])] <- NA }
+# }
+# fdir6[basin_outlet] <- fdir1[basin_outlet]
+#
+nwp_zone_rank <- matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
+nwp_zone_next <- nwp_zone_rank
+nwp_zone_rank[xx] <- nwp_zone[xx]
+nwp_zone_next[xx] <- nwp_zone[zz]
+yy <- which(nwp_zone_rank == nwp_zone_next, arr.ind = TRUE)
+if (length(yy) != 0) {
+fdir6[yy] <- NA
 }
 fdir6[basin_outlet] <- fdir1[basin_outlet]
 #
@@ -535,14 +546,13 @@ fdir6[basin_outlet] <- fdir1[basin_outlet]
 next1 <- fdir6
 nwp_zone_rank <- as.matrix(nwp_zone)
 nwp_zone_next <- matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
-#
 xx <- which(fdir6 > 0, arr.ind = TRUE)
 yy <- xx
 #
 ListResFactor <- seq(1, as.integer(4*ResFactor), by = as.integer(ResFactor/2))
 #
 for (i in 1 : 5) {
-###
+#
 for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
 zz <- fdir1[yy]
 yy <- yy + FdirNumber[zz,]
@@ -550,36 +560,52 @@ yy <- yy + FdirNumber[zz,]
 #
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
+#
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
-if (length(zz[,1]) < 1) {
+if (length(zz) < 1) {
   break }
+#
+if (length(zz) == 2) {
+zz <- t(zz) }
+#
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
 xx <- zz
-###
+#
+if (length(yy[,1]) < 1) {
+  break }
+#
 }
 #
 ## Major River: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
 #
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind = TRUE)
 yy <- xx
-
 for (i in 1 : 2) {
-  ###
-  for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
+#
+for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
     zz <- fdir1[yy]
     yy <- yy + FdirNumber[zz,]
   }
+#
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
+#
 zz <- which(as.matrix(MajorMinorRiv3[yy]) == 1, arr.ind = TRUE)
+#
 if (length(zz[,1]) < 1) {
   break }
+#
+if (length(zz) == 2) {
+  zz <- t(zz) }
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
 xx <- zz
+#
+if (length(xx[,1]) < 1) {
+  break }
 ###
 }
 ### Correcting flow direction of the outlets based on the grid flow direction values.
