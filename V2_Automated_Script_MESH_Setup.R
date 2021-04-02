@@ -437,7 +437,7 @@ yz[1,] <- NA
 MajorMinorRiv[yz] <- NA
 } }
 #
-writeRaster(MajorMinorRiv, "MajorMinorRiv.tif", datatype="INT2S", overwrite=TRUE)
+# writeRaster(MajorMinorRiv, "MajorMinorRiv.tif", datatype="INT2S", overwrite=TRUE)
 #
 ## Masking elevation by the longest flow path length of the maximum flow accumulation cell (either major or minor river) inside the modeling grid
 ### and add an extra elevation grid cells for final outlet points that have elevation values lower than the basins minimum 
@@ -451,7 +451,7 @@ for (i in 1 : length(xx[,1])) {
 for (j in 1 : (ResFactor*ResFactor)) {
 yy[i,1] <- (yy[i,1] + as.integer(FdirNumber[fdir1[t(yy[i,])],1]))
 yy[i,2] <- (yy[i,2] + as.integer(FdirNumber[fdir1[t(yy[i,])],2]))
-if (nwp_zone[t(xx[i,])] != nwp_zone[t(yy[i,])]) {
+if ((nwp_zone[t(xx[i,])] != nwp_zone[t(yy[i,])]) & is.na(MajorMinorRiv3[t(yy[i,])])) {
     break }
 } }
 #
