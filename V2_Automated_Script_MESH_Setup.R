@@ -479,7 +479,7 @@ dim(rank2) <- dim(nwp_grid)
 res(rank2) <- res(nwp_grid)
 crs(rank2) <- crs(nwp_grid)
 rank3 = disaggregate(rank2, fact = ResFactor, fun = max, na.rm=TRUE)
-writeRaster(rank2, "MESH_Rank.tif", datatype="INT2S", overwrite=TRUE)
+# writeRaster(rank2, "MESH_Rank.tif", datatype="INT2S", overwrite=TRUE)
 #
 ###### Creating basin boundary mask file ###########################################################
 basin_boundary_mask <- as.matrix(facc_at_outlet1)
@@ -629,7 +629,7 @@ grid_fdir1[zz] <- 8
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
 grid_fdir1[zz] <- fdir1[zz]
 #
-writeRaster(grid_fdir1, "MESH_FDir4.tif", datatype="INT2S", overwrite=TRUE)
+# writeRaster(grid_fdir1, "MESH_FDir4.tif", datatype="INT2S", overwrite=TRUE)
 ##
 ### Produce the Next of the Major River modeling grid cell from the flow direction, Rank and length threshold below which the diagonal flow direction will be assigned
 next2 <- MajorMinorRiv
@@ -639,7 +639,7 @@ next2[xx] <- next1[xx]
 grid_fdir2[xx] <- grid_fdir1[xx]
 #
 grid_next <- aggregate(next2, fact = ResFactor, fun = max, na.rm=TRUE)
-writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
+# writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
 grid_next <- as.matrix(grid_next)
 #
 grid_fdir <- aggregate(grid_fdir2, fact = ResFactor, fun = min, na.rm=TRUE)
