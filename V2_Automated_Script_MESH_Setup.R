@@ -27,6 +27,7 @@
 #          10-Feb-2021: Improved and included various options. Tested on Bow River Basin at Banff
 #=============================================================================================================
 rm(list = ls())
+start_time <- Sys.time()
 ## loading libraries
 # install.packages('ncdf4', repos = "http://cran.us.r-project.org")
 library(raster)
@@ -48,8 +49,8 @@ ncpath <- "C:/PD/Automated_MESH_Setup_Sample"
 MESHVersion <- "Mountain"
 # MESHVersion <- "Original"
 #
-InsertedReservoir <- "NoReservoir"
-# InsertedReservoir <- "Reservoir"
+# InsertedReservoir <- "NoReservoir"
+InsertedReservoir <- "Reservoir"
 #
 UpdateIrrigation <- "NoIrrigation"
 #InsertedIrrigation <- "Irrigation"
@@ -77,8 +78,8 @@ Min_Chanel_Slope <- 0.001
 MinThresh <- 123 # based on 90 meter resolution dem (0.1km2 = 12, 0.5km2 = 61, 1km2 = 123) # 180 from stream drop analysis
 #
 ###### Name of the drainage basin of study ############################
-BasinName <- paste0("BowRiverBasinBanff_GEM_0p125_MinThresh_",MinThresh,"_")
-# BasinName <- paste0("BowElbowRiverBasins_GEM_0p125_MinThresh_",MinThresh,"_") 
+BasinName <- paste0("BowRiverBasinBanff_WRF_0p05_MinThresh_",MinThresh,"_")
+# BasinName <- paste0("BowElbowRiverBasins_WRF_0p05_MinThresh_",MinThresh,"_") 
 #
 ####### Flow direction numbers
 FdirNumber <- matrix((as.integer(c(0,-1,-1,-1,0,1,1,1,1,1,0,-1,-1,-1,0,1))),8,2)
@@ -120,10 +121,10 @@ GRUsClass <- matrix(c(seq(0,20),
 ########## Set the climate forcing grid domain ###################################################################################################
 LLXcorner <- -116.75
 LLYcorner <- 50.00
-NumRow <- 15
-NumCol <- 29
-XRes <- 0.125
-YRes <- 0.125
+NumRow <- 38
+NumCol <- 73
+XRes <- 0.05
+YRes <- 0.05
 URXcorner <- (LLXcorner + (NumCol*XRes)) 
 URYcorner <- (LLYcorner + (NumRow*YRes))
 #
@@ -161,7 +162,7 @@ writeRaster(domain_dem1, "resample_domain_dem.tif", datatype="FLT4S", overwrite=
 # 
 # land_cover <- resample(domain_landcover, nwp_zone, method="ngb")
 # writeRaster(land_cover, "res30_reclass_domain_landcover_glacier_corrected.tif", datatype="INT2S", overwrite=TRUE)
-land_cover <- raster("res30_reclass_domain_landcover_glacier_corrected.tif")
+land_cover <- raster("wrf_res30_reclass_domain_landcover_glacier_corrected.tif")
 #
 #### Read irrigation fraction and segregate the cropland into Irrigated and Non-Irrigated land use ################
 if (UpdateIrrigation == "Irrigation") {
@@ -175,8 +176,9 @@ IrrigInLandCover <- c(5,999,999)          # Irrigated
 }
 #
 #### Creating the basin outlet using the lat and long data ##############################################################
-# streamgauge <- data.frame(LONGITUDE = c(-115.5717), LATITUDE = c(51.17222))
-streamgauge <- data.frame(LONGITUDE = c(-115.5717,-114.501), LATITUDE = c(51.17222,50.996))
+streamgauge <- data.frame(LONGITUDE = c(-114.093), LATITUDE = c(51.048))
+# streamgauge <- data.frame(LONGITUDE = c(-115.5717,-114.501), LATITUDE = c(51.17222,50.996))
+# streamgauge <- data.frame(LONGITUDE = c(-115.498,-114.496), LATITUDE = c(51.171,51.004))
 coordinates(streamgauge) = ~ LONGITUDE+LATITUDE
 crs(streamgauge) <- crs(domain_dem)
 raster::shapefile(streamgauge, "approxoutlets.shp", overwrite=TRUE)
@@ -195,14 +197,16 @@ elev_mean <- disaggregate(elev_mean1, fact = ResFactor, fun = mean, na.rm=TRUE)
 delta <- (domain_dem1 - resample(elev_mean1, nwp_zone, method="bilinear"))
 delta_elev_max <- ((domain_dem1 - elev_mean) / elev_max)
 #  
-#### delta if the elevation of the nwp model to be used
+#### delta calculation when the elevation of the nwp model is used
 # elev_mean <- disaggregate(nwp_dem, fact = ResFactor, fun = mean, na.rm=TRUE)
 # delta <- (domain_dem1 - model_nwp_dem)
 # delta_elev_max <- ((domain_dem1 - elev_mean) / elev_max)
-##############################################################################################################
+#
+### Elevation band within a modeling grid for GRUs creation
 # elev_band <- domain_dem1
-# elev_band[domain_dem1 <= elev_mean] <- 1
-# elev_band[domain_dem1 > elev_mean] <- 2
+# elev_band[domain_dem1 < (elev_mean - 200)] <- 1
+# elev_band[domain_dem1 > (elev_mean - 200) & domain_dem1 < elev_mean + 200] <- 2
+# elev_band[domain_dem1 > (elev_mean + 200)] <- 3
 }
 #
 ### Import the percent of clay, sand and Organic Matter contents for the required soil layers #################
@@ -479,7 +483,7 @@ dim(rank2) <- dim(nwp_grid)
 res(rank2) <- res(nwp_grid)
 crs(rank2) <- crs(nwp_grid)
 rank3 = disaggregate(rank2, fact = ResFactor, fun = max, na.rm=TRUE)
-# writeRaster(rank2, "MESH_Rank.tif", datatype="INT2S", overwrite=TRUE)
+writeRaster(rank2, "MESH_Rank.tif", datatype="INT2S", overwrite=TRUE)
 #
 ###### Creating basin boundary mask file ###########################################################
 basin_boundary_mask <- as.matrix(facc_at_outlet1)
@@ -513,27 +517,23 @@ nwp_zone_edge_mask[nwp_zone_edge_mask > 1] <- 1
 ########### Masking the local (within the grid) flow direction by edge of the nwp mask file (nwp_zone_edge_mask)
 fdir6 <- (as.matrix(fdir1)*nwp_zone_edge_mask)
 ########### Masking out the flow directions cells that are not leaving the modeling grid cell
+nwp_zone_rank <- matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
+nwp_zone_next <- nwp_zone_rank
+#
 xx <- which(fdir6 > 0, arr.ind=TRUE)
 yy <- fdir1[xx]
 zz <- xx  + FdirNumber[yy,]
 #
-# for (i in 1 : length(xx[,1])) {
-# if (nwp_zone[t(xx[i,])] == nwp_zone[t(zz[i,])]) {
-# fdir6[t(xx[i,])] <- NA }
-# }
-# fdir6[basin_outlet] <- fdir1[basin_outlet]
-#
-nwp_zone_rank <- matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
-nwp_zone_next <- nwp_zone_rank
 nwp_zone_rank[xx] <- nwp_zone[xx]
 nwp_zone_next[xx] <- nwp_zone[zz]
 yy <- which(nwp_zone_rank == nwp_zone_next, arr.ind = TRUE)
+#
 if (length(yy) != 0) {
 fdir6[yy] <- NA
 }
 fdir6[basin_outlet] <- fdir1[basin_outlet]
 #
-## Local Rivers: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
+## Local Rivers: Produce the Next of the modeling grid cell from the flow direction, rank and length threshold above which the diagonal flow direction will be assigned
 next1 <- fdir6
 nwp_zone_rank <- as.matrix(nwp_zone)
 nwp_zone_next <- matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
@@ -548,22 +548,24 @@ for (j in ListResFactor[i] : ListResFactor[i + 1] - 1) {
 zz <- fdir1[yy]
 yy <- yy + FdirNumber[zz,]
 }
+#
 if (length(yy) < 1) {
   break }
 #
 next1[xx] <- rank3[yy]
 nwp_zone_next[xx] <- nwp_zone_rank[yy]
+#
 zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
 #
 if (length(zz) < 1) {
   break }
 #
-if (length(zz) == 2) {
-zz <- t(zz) }
-#
 zx <- cellFromRowCol(nwp_zone, xx[,1], xx[,2])
 zy <- cellFromRowCol(nwp_zone, zz[,1], zz[,2])
 yy <- yy[zx %in% zy,]
+#
+if (length(yy) == 2) {
+   yy <- t(yy) }
 xx <- zz
 #
 if (length(yy[,1]) < 1) {
@@ -572,7 +574,6 @@ if (length(yy[,1]) < 1) {
 }
 #
 ## Major River: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
-#
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind = TRUE)
 yy <- xx
 for (i in 1 : 2) {
@@ -585,7 +586,8 @@ if (length(yy) < 1) {
     break }
 #
 next1[xx] <- rank3[yy]
-nwp_zone_next[xx] <- nwp_zone_rank[yy]  
+nwp_zone_next[xx] <- nwp_zone_rank[yy]
+#
 zz <- which(as.matrix(MajorMinorRiv3[yy]) == 1, arr.ind = TRUE)
 #
 if (length(zz[,1]) < 1) {
@@ -605,6 +607,14 @@ if (length(yy[,1]) < 1) {
 ### Correcting flow direction of the outlets based on the grid flow direction values.
 next1[basin_outlet] <- rank3[basin_outlet_next]
 nwp_zone_next[basin_outlet] <- nwp_zone_rank[basin_outlet_next]
+#
+xx <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
+if (length(xx[,1]) > 0) {
+yy <- fdir1[xx]
+zz <- xx  + FdirNumber[yy,]
+next1[xx] <- rank3[zz]
+nwp_zone_next[xx] <- nwp_zone_rank[zz]
+}
 ##
 ##### Generating flow direction for the modeling grid cell ############################################
 grid_fdir1 <- nwp_zone   #matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
@@ -630,19 +640,42 @@ zz <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
 grid_fdir1[zz] <- fdir1[zz]
 #
 # writeRaster(grid_fdir1, "MESH_FDir4.tif", datatype="INT2S", overwrite=TRUE)
-##
-### Produce the Next of the Major River modeling grid cell from the flow direction, Rank and length threshold below which the diagonal flow direction will be assigned
+#
+### Produce the Next of the Major River of the modeling grid cell from the flow direction, Rank and length threshold below which the diagonal flow direction will be assigned
 next2 <- MajorMinorRiv
-grid_fdir2 <- next2
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind=TRUE)
 next2[xx] <- next1[xx]
-grid_fdir2[xx] <- grid_fdir1[xx]
 #
 grid_next <- aggregate(next2, fact = ResFactor, fun = max, na.rm=TRUE)
-# writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
+writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
 grid_next <- as.matrix(grid_next)
 #
-grid_fdir <- aggregate(grid_fdir2, fact = ResFactor, fun = min, na.rm=TRUE)
+###### If correction is required here the place to do it: correct grid_next as required. Flow direction, river network, diversion or any change in the river network
+# xx <- which(as.matrix(MajorMinorRiv) == 3, arr.ind=TRUE)
+# yy <- rank3[xx]
+# zz <- which(yy == 272, arr.ind=TRUE)
+# yy <- t(xx[zz,])
+# grid_fdir1[yy] <- 3
+# 
+# grid_next[16,25] <- 375
+# grid_next[12,32] <- 283
+# grid_next[13,33] <- 342
+# #
+##### Generating flow direction for the modeling grid cell
+grid_fdir <- nwp_grid
+grid_fdir[!is.na(grid_fdir)] <- NA
+for (i in 1 : 8) {
+xx <- which(grid_rank != 0, arr.ind=TRUE)
+yy <- xx
+yy[,1:2] <- NA
+#
+yy[,1] <- (xx[,1] + as.integer(FdirNumber[i,1]))
+yy[,2] <- (xx[,2] + as.integer(FdirNumber[i,2]))
+#
+zz <- which(grid_next[xx] == grid_rank[yy], arr.ind=TRUE)
+grid_fdir[xx[zz,]] <- i
+}
+#
 writeRaster(grid_fdir, "grid_fdirp.tif", datatype="INT2S", overwrite=TRUE)
 grid_fdir <- as.matrix(grid_fdir)
 #
@@ -668,7 +701,7 @@ GridFaction6 <- matrix(nwp_grid_facc[,6], NumRow, NumCol, byrow = T)
 GridFaction7 <- matrix(nwp_grid_facc[,7], NumRow, NumCol, byrow = T)
 GridFaction8 <- matrix(nwp_grid_facc[,8], NumRow, NumCol, byrow = T)
 #
-## Calculate the fraction of drainage area in all modeling grid cells
+######### Calculate the fraction of drainage area in all modeling grid cells
 grid_drain_area <- matrix(0, nrow = NumRow, ncol = NumCol, byrow = T)
 #
 for (i in 1:nrow(grid_drain_area)) {
@@ -693,7 +726,8 @@ for (i in 1:nrow(grid_drain_area)) {
       else if (grid_fdir[i,j] == 8) {
         grid_drain_area[i,j] <- (GridFaction8[i,j])} 
 } } }
-###
+#############################################################################
+#
 for (i in 1:nrow(grid_drain_area)) {
   for (j in 1:ncol(grid_drain_area)) {
     if ((i-1 >= 1) & (j-1 >= 1) & (i+1 <= NumRow) & (j+1 <= NumCol)) {
@@ -717,7 +751,7 @@ for (i in 1:nrow(grid_drain_area)) {
         grid_drain_area[i,j] <- (grid_drain_area[i,j] + GridFaction8[i-1,j-1])}
 } } }
 #
-######### compute the grid area [each cell FRAC within the basin] which is the product of drainage area fraction and the nominal grid area [m2]
+######### Compute the grid area [each cell FRAC within the basin] which is the product of drainage area fraction and the nominal grid area [m2]
 NominalGrid_Area <- mean(NWPGridFullArea[!is.na(NWPGridFullArea)])
 GridArea <- 1000000 * NominalGrid_Area * grid_drain_area / as.matrix(NWPGridFullArea)
 # GridArea <- 1000000 * grid_drain_area * NominalGrid_Area / (ResFactor*ResFactor)
@@ -734,9 +768,9 @@ system("mpiexec -n 8 AreaD8 -p grid_fdirp.tif -ad8 grid_da_ad8.tif -wg grid_area
 DA <- as.matrix(raster("grid_da_ad8.tif"))
 DA[is.na(DA)] <- 0
 #
-########### Bankfull cross-section area of river channel in [m2]
+############ Bankfull cross-section area of river channel in [m2]
 Bankfull  <- 0.043 * DA + 1.1         # Default watflood equation
-# Bankfull  <- 0.1667 * DA + 0.1     # best fit regression equation from Green Kenue
+# Bankfull  <- 0.1667 * DA + 0.1      # best fit regression equation from Green Kenue
 #
 ############## Define river classes (IAK) using drainage area (DA)
 IAK <- matrix(0, NumRow, NumCol)
