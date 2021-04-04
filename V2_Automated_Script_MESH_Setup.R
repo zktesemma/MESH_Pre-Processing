@@ -647,8 +647,6 @@ xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind=TRUE)
 next2[xx] <- next1[xx]
 #
 grid_next <- aggregate(next2, fact = ResFactor, fun = max, na.rm=TRUE)
-writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
-grid_next <- as.matrix(grid_next)
 #
 ###### If correction is required here the place to do it: correct grid_next as required. Flow direction, river network, diversion or any change in the river network
 # xx <- which(as.matrix(MajorMinorRiv) == 3, arr.ind=TRUE)
@@ -661,6 +659,9 @@ grid_next <- as.matrix(grid_next)
 # grid_next[12,32] <- 283
 # grid_next[13,33] <- 342
 # #
+# writeRaster(grid_next, "MESH_Next.tif", datatype="INT2S", overwrite=TRUE)
+grid_next <- as.matrix(grid_next)
+#
 ##### Generating flow direction for the modeling grid cell
 grid_fdir <- nwp_grid
 grid_fdir[!is.na(grid_fdir)] <- NA
