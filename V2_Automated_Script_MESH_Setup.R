@@ -605,16 +605,24 @@ if (length(yy[,1]) < 1) {
 #
 }
 #
-### Correcting flow direction of the outlets and its neighboring modelling grid cell based on the grid flow direction values.######
+### Correcting flow direction of the outlets and its neighboring modeling grid cell based on the grid flow direction values.#######
 xx <- which(next1 == next1[basin_outlet], arr.ind = TRUE)
 yy <- fdir1[xx]
 zz <- xx  + FdirNumber[yy,]
 next1[xx] <- rank3[zz]
 nwp_zone_next[xx] <- nwp_zone[zz]
-##
+#
 next1[basin_outlet] <- rank3[basin_outlet_next]
 nwp_zone_next[basin_outlet] <- nwp_zone_rank[basin_outlet_next]
-##
+#
+xx <- which(nwp_zone_next == nwp_zone_rank, arr.ind = TRUE)
+if (length(xx[,1]) > 0) {
+yy <- fdir1[xx]
+zz <- xx  + FdirNumber[yy,]
+next1[xx] <- rank3[zz]
+nwp_zone_next[xx] <- nwp_zone_rank[zz]
+}
+#
 ##### Generating flow direction for the modeling grid cell ########################################################################
 grid_fdir1 <- nwp_zone   #matrix(nrow = nrow(nwp_zone), ncol = ncol(nwp_zone))
 grid_fdir1[!is.na(grid_fdir1)] <- NA
