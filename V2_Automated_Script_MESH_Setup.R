@@ -573,6 +573,12 @@ if (length(yy[,1]) < 1) {
 #
 }
 #
+xx <- which(next1 == next1[basin_outlet], arr.ind = TRUE)
+yy <- fdir1[xx]
+zz <- xx  + FdirNumber[yy,]
+nwp_zone_next[xx] <- nwp_zone[zz]
+next1[xx] <- rank3[zz]
+#
 ## Major River: Produce the Next of the modeling grid cell from the flow direction, Rank and length threshold above which the diagonal flow direction will be assigned
 xx <- which(as.matrix(MajorMinorRiv) > 0, arr.ind = TRUE)
 yy <- xx
